@@ -1,0 +1,16 @@
+# Task ID: 17
+# Title: RIS Calculation Engine
+# Status: pending
+# Dependencies: None
+# Priority: medium
+# Description: Implement Relative Intensity Score calculations
+# Details:
+1. Implement RIS formula: weight × (1 + reps×0.025)
+2. Create calculation functions
+3. Store historical RIS data
+4. Calculate top 3 exercises
+5. Add comparison features
+6. Create visualization components
+
+# Test Strategy:
+Unit tests for calculations, integration tests for data flow

@@ -1,0 +1,16 @@
+# Task ID: 6
+# Title: Natural Language Parser Core
+# Status: pending
+# Dependencies: None
+# Priority: high
+# Description: Implement the workout text parser to handle various input formats
+# Details:
+1. Create parser grammar for workout notation
+2. Handle sets x reps format (5x5)
+3. Support supersets (ss) and circuits (+)
+4. Parse RPE notation (@RPE8)
+5. Handle weight specifications
+6. Implement error handling for malformed input
+
+# Test Strategy:
+Comprehensive unit tests for all parse cases, edge cases, and error scenarios

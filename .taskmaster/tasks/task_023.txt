@@ -1,0 +1,16 @@
+# Task ID: 23
+# Title: Settings Screen
+# Status: pending
+# Dependencies: None
+# Priority: low
+# Description: Build user settings and preferences interface
+# Details:
+1. Create settings UI layout
+2. Add rest timer preferences
+3. Implement notification settings
+4. Add unit preferences (kg/lbs)
+5. Create about/help sections
+6. Add logout functionality
+
+# Test Strategy:
+Settings persistence tests, preference application tests

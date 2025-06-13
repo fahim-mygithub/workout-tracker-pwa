@@ -1,0 +1,16 @@
+# Task ID: 19
+# Title: Push Notifications
+# Status: pending
+# Dependencies: None
+# Priority: medium
+# Description: Set up push notifications for rest timers and social features
+# Details:
+1. Configure Firebase Cloud Messaging
+2. Implement notification permissions flow
+3. Create notification handlers
+4. Add notification preferences
+5. Handle foreground/background states
+6. Test cross-platform compatibility
+
+# Test Strategy:
+Notification delivery tests, permission flow tests, state handling tests

@@ -1,0 +1,16 @@
+# Task ID: 7
+# Title: State Management Setup
+# Status: pending
+# Dependencies: None
+# Priority: medium
+# Description: Implement Redux or Context API for global state management
+# Details:
+1. Evaluate Redux vs Context API for app needs
+2. Set up chosen state management solution
+3. Create store structure for workouts, user, and UI state
+4. Implement actions and reducers/contexts
+5. Add Redux DevTools or equivalent
+6. Create typed hooks for state access
+
+# Test Strategy:
+Unit tests for all reducers/contexts, integration tests for state updates

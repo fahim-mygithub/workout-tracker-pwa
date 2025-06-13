@@ -1,0 +1,16 @@
+# Task ID: 11
+# Title: Exercise Card Component
+# Status: pending
+# Dependencies: None
+# Priority: high
+# Description: Create the core exercise card component with all states and variants
+# Details:
+1. Design card layout with video thumbnail
+2. Implement progress dots with connections
+3. Add weight/rep controls
+4. Handle active/completed/upcoming states
+5. Support superset grouping
+6. Add swipe gestures for mobile
+
+# Test Strategy:
+Component tests for all states, interaction tests, visual tests

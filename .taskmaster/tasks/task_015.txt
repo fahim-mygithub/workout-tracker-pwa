@@ -1,0 +1,16 @@
+# Task ID: 15
+# Title: Exercise Directory Screen
+# Status: pending
+# Dependencies: None
+# Priority: medium
+# Description: Build the searchable exercise database interface
+# Details:
+1. Create search interface
+2. Implement filters (muscle, equipment)
+3. Design exercise list cards
+4. Add infinite scroll/pagination
+5. Integrate video previews
+6. Add to workout functionality
+
+# Test Strategy:
+Search functionality tests, filter tests, performance tests for large lists

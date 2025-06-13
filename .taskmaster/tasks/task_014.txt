@@ -1,0 +1,16 @@
+# Task ID: 14
+# Title: Build Screen - Text Mode
+# Status: pending
+# Dependencies: None
+# Priority: high
+# Description: Implement the text-based workout builder with live preview
+# Details:
+1. Create text input interface
+2. Integrate workout parser
+3. Show real-time preview
+4. Handle parse errors gracefully
+5. Add exercise autocomplete
+6. Implement save functionality
+
+# Test Strategy:
+Parser integration tests, UI interaction tests, error handling tests

@@ -1,0 +1,16 @@
+# Task ID: 12
+# Title: Rest Timer Implementation
+# Status: pending
+# Dependencies: None
+# Priority: high
+# Description: Build the rest timer with auto-start and notification features
+# Details:
+1. Create countdown timer component
+2. Implement auto-start after set completion
+3. Add pause/resume functionality
+4. Configure audio/vibration alerts
+5. Integrate with push notifications
+6. Handle background timer state
+
+# Test Strategy:
+Timer accuracy tests, notification tests, background state tests
