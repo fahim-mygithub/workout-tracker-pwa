@@ -1,0 +1,196 @@
+Product Requirements Document (PRD)
+Workout Tracker Progressive Web App
+
+1. EXECUTIVE SUMMARY
+The Workout Tracker PWA is a mobile-first Progressive Web Application designed for gym users who want a fast, intelligent workout tracking system. The app's killer feature is natural language workout planning - users can type "5x5 Bench ss 3x10 pushups" and the app instantly parses this into a structured workout. Built with React and Firebase, it offers offline-first functionality, smart rest timers, and exercise-specific back-off calculations.
+
+2. PRODUCT VISION
+Create the fastest, most intuitive workout tracking app that feels as natural as taking notes but provides the intelligence of a personal trainer. The app removes friction from workout logging while providing powerful features for progression tracking and workout optimization.
+
+3. TARGET USERS
+Primary Persona: "Alex the Consistent Tracker"
+- 6 months to 2 years gym experience
+- Knows basic exercises and workout structure
+- Needs quick logging during workouts
+- Values progression tracking and consistency
+
+Secondary Persona: "Sam the Social Lifter"
+- Beginner level (0-6 months experience)
+- Learns from friends and online resources
+- Needs video guidance and clear instructions
+- Motivated by social features and sharing
+
+4. CORE FEATURES
+
+4.1 Natural Language Workout Parser
+- Parse text input like "5x5 Squat @RPE8 + 3x12 Leg Curls"
+- Support for supersets (ss), circuits (+), and RPE notation
+- Real-time preview of parsed workout structure
+- Error handling for malformed input
+- Smart suggestions based on exercise database
+
+4.2 Real-time Workout Tracking
+- Card-based UI for current exercise display
+- Visual progress dots for completed sets
+- Auto-starting rest timers between sets
+- Failed set handling with rep input
+- Quick weight adjustment controls (+/- buttons)
+- Superset grouping and navigation
+
+4.3 Exercise Database Integration
+- 5,342 exercises from CSV import
+- Each exercise includes: name, muscle groups, equipment, video links, difficulty
+- Searchable and filterable directory
+- Custom exercise addition capability
+- Exercise-specific rest times and back-off calculations
+
+4.4 Smart Features
+- Relative Intensity Score (RIS) calculation
+- 15% weight back-off for failed sets (customizable later)
+- 2-minute default rest timer (exercise-specific later)
+- Workout completion tracking and streaks
+- Calendar view with workout type indicators
+
+4.5 Progressive Web App Features
+- Offline-first functionality with service workers
+- Push notifications for rest timers
+- Home screen installation
+- Background sync for data updates
+- Share workout URLs functionality
+
+5. TECHNICAL ARCHITECTURE
+
+5.1 Frontend Stack
+- React 18+ with TypeScript
+- PWA capabilities (service workers, manifest)
+- Redux or Context API for state management
+- Tailwind CSS for styling
+- React Router for navigation
+
+5.2 Backend Stack
+- Firebase Authentication (Email + Google)
+- Cloud Firestore for data storage
+- Firebase Cloud Functions for server logic
+- Firebase Hosting for deployment
+- Firebase Cloud Messaging for push notifications
+
+5.3 Testing Strategy
+- Jest + React Testing Library for unit tests
+- Cypress for E2E testing
+- Test-Driven Development approach
+- Minimum 80% code coverage target
+
+5.4 Data Models
+
+User Model:
+- uid: string
+- email: string
+- displayName: string
+- createdAt: timestamp
+- lastWorkout: timestamp
+- preferences: object
+
+Workout Model:
+- id: string
+- userId: string
+- date: timestamp
+- type: string (push/pull/legs/custom)
+- exercises: Exercise[]
+- completed: boolean
+- duration: number
+- notes: string
+
+Exercise Model:
+- id: string
+- name: string
+- sets: Set[]
+- restTime: number
+- muscleGroups: string[]
+- equipment: string
+- supersetGroup?: string
+- backoffPercentage: number
+
+Set Model:
+- reps: number
+- weight: number
+- completed: boolean
+- failed: boolean
+- actualReps?: number
+- rpe?: number
+
+6. USER INTERFACE SPECIFICATIONS
+
+6.1 Navigation Structure
+- Home: Calendar view, quick stats, today's workout
+- My Workout: Active workout tracking interface
+- Build: Workout creation with text/visual modes
+- Directory: Exercise database browser
+- Stats: Progress charts and PRs
+- Settings: User preferences and defaults
+
+6.2 Design System
+- Mobile-first responsive design
+- System fonts for performance
+- High contrast for gym visibility
+- Large touch targets (48x48px minimum)
+- Dark mode support
+
+7. MVP SCOPE
+
+Phase 1 Features (MVP):
+- User authentication (Email + Google)
+- Natural language workout parser
+- Basic workout tracking with timers
+- Exercise database integration
+- Offline support
+- Share workout URLs
+- Calendar view (30 days)
+- Top 3 RIS display
+
+Future Features (Post-MVP):
+- Full social features and activity feed
+- Advanced analytics and progression graphs
+- Workout templates and programs
+- Exercise video integration
+- Custom exercise creation
+- Apple Health/Google Fit integration
+
+8. SUCCESS METRICS
+- User can create a workout in under 30 seconds
+- 95% uptime for online features
+- < 3 second initial load time
+- Offline functionality for core features
+- 80% user retention after 1 week
+- Average session time > 10 minutes
+
+9. TECHNICAL REQUIREMENTS
+- Support modern browsers (Chrome, Safari, Firefox, Edge)
+- Mobile-first responsive design
+- Progressive enhancement approach
+- Accessibility compliance (WCAG 2.1 AA)
+- GDPR compliance for data handling
+- Secure authentication and data encryption
+
+10. DEVELOPMENT APPROACH
+- Test-Driven Development (TDD)
+- Continuous Integration/Deployment
+- Feature branch workflow
+- Code reviews for all PRs
+- Memory logging for knowledge transfer
+- Regular commits to GitHub
+
+11. FIREBASE CONFIGURATION
+- Project setup with test and production environments
+- Firestore security rules for user data isolation
+- Cloud Functions for complex calculations
+- Authentication providers configuration
+- Hosting with custom domain support
+
+12. PERFORMANCE TARGETS
+- First Contentful Paint < 1.5s
+- Time to Interactive < 3s
+- Lighthouse score > 90
+- Bundle size < 200KB (initial)
+- 100% offline functionality for core features
+
+This PRD defines a focused MVP that delivers the core value proposition while laying the foundation for future enhancements. The natural language parser and intelligent workout tracking features differentiate this app from competitors while maintaining simplicity and speed.
