@@ -1,6 +1,6 @@
 # Task ID: 6
 # Title: Natural Language Parser Core
-# Status: pending
+# Status: completed
 # Dependencies: None
 # Priority: high
 # Description: Implement the workout text parser to handle various input formats
