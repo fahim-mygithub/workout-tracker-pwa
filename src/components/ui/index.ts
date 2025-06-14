@@ -19,3 +19,6 @@ export type { AlertProps } from './Alert';
 
 export { Container, Flex, Grid } from './Layout';
 export type { ContainerProps, FlexProps, GridProps } from './Layout';
+
+export { Calendar } from './Calendar';
+export type { CalendarProps } from './Calendar';

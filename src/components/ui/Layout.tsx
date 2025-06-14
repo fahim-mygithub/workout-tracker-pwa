@@ -16,6 +16,7 @@ export interface FlexProps extends React.HTMLAttributes<HTMLDivElement> {
 
 export interface GridProps extends React.HTMLAttributes<HTMLDivElement> {
   cols?: 1 | 2 | 3 | 4 | 6 | 12;
+  lgCols?: 1 | 2 | 3 | 4 | 6 | 12;
   gap?: 'none' | 'sm' | 'md' | 'lg' | 'xl';
   responsive?: boolean;
 }
@@ -115,21 +116,32 @@ export const Grid = React.forwardRef<HTMLDivElement, GridProps>(
   ({ 
     className, 
     cols = 2, 
+    lgCols,
     gap = 'md',
     responsive = true,
     ...props 
-  }, ref) => (
-    <div
-      ref={ref}
-      className={cn(
-        'grid',
-        responsive ? `grid-cols-1 md:${gridCols[cols]}` : gridCols[cols],
-        gapSizes[gap],
-        className
-      )}
-      {...props}
-    />
-  )
+  }, ref) => {
+    const baseClasses = ['grid', gapSizes[gap]];
+    
+    if (responsive) {
+      baseClasses.push('grid-cols-1');
+      if (lgCols) {
+        baseClasses.push(`lg:${gridCols[lgCols]}`);
+      } else {
+        baseClasses.push(`md:${gridCols[cols]}`);
+      }
+    } else {
+      baseClasses.push(gridCols[cols]);
+    }
+
+    return (
+      <div
+        ref={ref}
+        className={cn(...baseClasses, className)}
+        {...props}
+      />
+    );
+  }
 );
 
 Container.displayName = 'Container';
