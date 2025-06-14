@@ -4,8 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "dev:chrome": "./scripts/dev-with-chrome.sh",
+    "dev": "./scripts/dev-with-chrome.sh",
+    "dev:vite-only": "vite",
     "chrome:launch": "./scripts/launch-chrome-debug.sh",
     "chrome:kill": "pkill -f 'remote-debugging-port=9222' || true",
     "build": "tsc -b && vite build",

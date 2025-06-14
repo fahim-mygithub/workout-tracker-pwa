@@ -59,7 +59,14 @@ const initialState: WorkoutState = {
     totalTime: 0,
     autoStart: true,
   },
-  workoutHistory: [],
+  // Add some mock workout history for demonstration
+  workoutHistory: [
+    'workout-2024-12-13-001',
+    'workout-2024-12-11-002', 
+    'workout-2024-12-09-003',
+    'workout-2024-12-07-004',
+    'workout-2024-12-05-005'
+  ],
   isLoading: false,
   error: null,
 };

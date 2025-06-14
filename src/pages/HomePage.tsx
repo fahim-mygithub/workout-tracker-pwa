@@ -3,19 +3,29 @@ import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { Container, Typography, Card, CardContent, Flex, Button, Calendar, Grid } from '../components/ui';
 import { QuickStats } from '../components/stats';
-import { RootState } from '../store';
+import type { RootState } from '../store/index';
 
 export const HomePage: React.FC = () => {
   const navigate = useNavigate();
-  const { activeWorkout } = useSelector((state: RootState) => state.workout);
+  const { activeWorkout, workoutHistory } = useSelector((state: RootState) => state.workout);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
-  // Mock workout dates for calendar highlighting
-  const workoutDates = [
-    new Date(2024, 11, 10), // December 10, 2024
-    new Date(2024, 11, 12), // December 12, 2024
-    new Date(2024, 11, 15), // December 15, 2024
-  ];
+  // Generate workout dates based on workout history
+  const generateWorkoutDates = () => {
+    const dates = [];
+    const today = new Date();
+    
+    // Generate some recent workout dates based on workout history length
+    for (let i = 0; i < Math.min(workoutHistory.length, 8); i++) {
+      const workoutDate = new Date(today);
+      workoutDate.setDate(today.getDate() - (i * 2 + Math.floor(Math.random() * 3)));
+      dates.push(workoutDate);
+    }
+    
+    return dates;
+  };
+  
+  const workoutDates = generateWorkoutDates();
 
   const handleStartWorkout = () => {
     navigate('/workout');
@@ -160,21 +170,51 @@ export const HomePage: React.FC = () => {
                   Recent Activity
                 </Typography>
                 <div className="space-y-2">
-                  {[1, 2, 3].map((_, index) => (
-                    <div key={index} className="flex items-center justify-between p-2 bg-slate-50 rounded">
-                      <div>
-                        <Typography variant="body2" className="font-medium">
-                          Upper Body Strength
-                        </Typography>
-                        <Typography variant="caption" color="secondary">
-                          {index + 1} days ago
-                        </Typography>
-                      </div>
-                      <Typography variant="caption" color="secondary">
-                        45 min
+                  {workoutHistory.length > 0 ? (
+                    workoutHistory.slice(0, 3).map((workoutId, index) => {
+                      // Mock workout names and durations based on workout ID
+                      const workoutNames = [
+                        'Upper Body Strength',
+                        'Lower Body Power',
+                        'Full Body Circuit',
+                        'Push Day',
+                        'Pull Day',
+                        'Leg Day'
+                      ];
+                      const workoutName = workoutNames[index % workoutNames.length];
+                      const duration = 35 + Math.floor(Math.random() * 30); // 35-65 minutes
+                      
+                      return (
+                        <div key={workoutId} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer">
+                          <div>
+                            <Typography variant="body2" className="font-medium">
+                              {workoutName}
+                            </Typography>
+                            <Typography variant="caption" color="secondary">
+                              {index + 1} {index === 0 ? 'day' : 'days'} ago
+                            </Typography>
+                          </div>
+                          <div className="text-right">
+                            <Typography variant="body2" className="font-medium">
+                              {duration} min
+                            </Typography>
+                            <Typography variant="caption" color="secondary">
+                              {Math.floor(Math.random() * 8) + 4} exercises
+                            </Typography>
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="text-center py-4">
+                      <Typography variant="body2" color="secondary">
+                        No recent workouts
+                      </Typography>
+                      <Typography variant="caption" color="muted">
+                        Start your first workout to see activity here
                       </Typography>
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
             </CardContent>

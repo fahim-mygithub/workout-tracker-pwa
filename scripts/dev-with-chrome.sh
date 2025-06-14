@@ -6,7 +6,7 @@ pkill -f "remote-debugging-port=9222" || true
 echo "Starting Vite dev server..."
 
 # Start Vite in the background
-npm run dev &
+npm run dev:vite-only &
 VITE_PID=$!
 
 # Wait for Vite to be ready
