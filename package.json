@@ -5,6 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:chrome": "./scripts/dev-with-chrome.sh",
+    "chrome:launch": "./scripts/launch-chrome-debug.sh",
+    "chrome:kill": "pkill -f 'remote-debugging-port=9222' || true",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",

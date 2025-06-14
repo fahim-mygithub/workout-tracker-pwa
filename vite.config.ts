@@ -106,4 +106,9 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
   },
+  server: {
+    open: false, // Disable automatic browser opening
+    port: 5173,
+    host: true, // Listen on all addresses
+  },
 })
