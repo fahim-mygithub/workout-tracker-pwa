@@ -1,6 +1,6 @@
 # Task ID: 4
 # Title: Exercise Database Import
-# Status: pending
+# Status: completed
 # Dependencies: None
 # Priority: high
 # Description: Import exercise CSV data into Firestore and create data access layer
