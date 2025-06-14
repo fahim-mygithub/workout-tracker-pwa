@@ -71,26 +71,29 @@ export class WorkoutParser {
     if (isSuperset) type = 'superset';
     else if (isCircuit) type = 'circuit';
     
-    // Clean the segment by removing superset/circuit indicators
-    let cleanSegment = segment
-      .replace(this.SUPERSET_PATTERN, '')
-      .replace(this.CIRCUIT_PATTERN, '')
-      .trim();
-    
     const exercises: Exercise[] = [];
     
-    if (type === 'superset' || type === 'circuit') {
-      // For supersets and circuits, split by exercises
-      const exerciseParts = cleanSegment.split(/\s+(?=\d+x\d+)/);
+    if (type === 'superset') {
+      // Split by "ss" for supersets
+      const exerciseParts = segment.split(this.SUPERSET_PATTERN).map(s => s.trim()).filter(s => s);
       for (const part of exerciseParts) {
-        const exercise = this.parseExercise(part.trim());
+        const exercise = this.parseExercise(part);
+        if (exercise) {
+          exercises.push(exercise);
+        }
+      }
+    } else if (type === 'circuit') {
+      // Split by "+" for circuits
+      const exerciseParts = segment.split(this.CIRCUIT_PATTERN).map(s => s.trim()).filter(s => s);
+      for (const part of exerciseParts) {
+        const exercise = this.parseExercise(part);
         if (exercise) {
           exercises.push(exercise);
         }
       }
     } else {
       // For normal sets, parse as single exercise
-      const exercise = this.parseExercise(cleanSegment);
+      const exercise = this.parseExercise(segment);
       if (exercise) {
         exercises.push(exercise);
       }

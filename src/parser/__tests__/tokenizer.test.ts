@@ -85,7 +85,7 @@ describe('Tokenizer', () => {
     const tokens = Tokenizer.tokenize('5x10\n3x8');
     
     expect(tokens[0]).toMatchObject({ line: 1, column: 1 });
-    expect(tokens[2]).toMatchObject({ line: 1, column: 4 });
+    expect(tokens[2]).toMatchObject({ line: 1, column: 3 }); // "10" starts at column 3, not 4
     expect(tokens[3]).toMatchObject({ type: TokenType.NEWLINE, line: 1 });
     expect(tokens[4]).toMatchObject({ line: 2, column: 1 });
   });
@@ -144,7 +144,7 @@ describe('Tokenizer', () => {
     const tokens = Tokenizer.tokenize(input);
     
     // Should skip whitespace but track positions correctly
-    expect(tokens[2]).toMatchObject({ 
+    expect(tokens[3]).toMatchObject({ 
       type: TokenType.WORD, 
       value: 'Squat',
       column: 7 // After '5x10  '

@@ -171,7 +171,21 @@ export class ExerciseMatcher {
     const scores: Array<[string, number]> = [];
 
     for (const [alias, canonical] of EXERCISE_ALIASES.entries()) {
-      const score = this.similarity(normalized, alias);
+      let score = this.similarity(normalized, alias);
+      
+      // Boost score for substring matches
+      if (alias.includes(normalized) || canonical.toLowerCase().includes(normalized)) {
+        score = Math.max(score, 0.8);
+      }
+      
+      // Boost score for word matches within exercise names
+      const aliasWords = alias.split(/\s+/);
+      const canonicalWords = canonical.toLowerCase().split(/\s+/);
+      
+      if (aliasWords.includes(normalized) || canonicalWords.includes(normalized)) {
+        score = Math.max(score, 0.9);
+      }
+      
       if (score > 0.5) { // Lower threshold for suggestions
         scores.push([canonical, score]);
       }
