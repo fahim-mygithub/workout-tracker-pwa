@@ -26,10 +26,10 @@ export const authService = {
         success: true,
         user: userCredential.user
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       return {
         success: false,
-        error: error.message
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
       };
     }
   },
@@ -41,10 +41,10 @@ export const authService = {
         success: true,
         user: userCredential.user
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       return {
         success: false,
-        error: error.message
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
       };
     }
   },
@@ -57,10 +57,10 @@ export const authService = {
         success: true,
         user: userCredential.user
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       return {
         success: false,
-        error: error.message
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
       };
     }
   },
@@ -72,10 +72,10 @@ export const authService = {
       return {
         success: true
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       return {
         success: false,
-        error: error.message
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
       };
     }
   },
