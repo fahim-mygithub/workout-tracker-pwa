@@ -3,6 +3,7 @@ import './App.css'
 import PWAInstallPrompt from './components/PWAInstallPrompt'
 import OfflineIndicator from './components/OfflineIndicator'
 import StateDemo from './components/state/StateDemo'
+import { UIComponentDemo } from './components/ui/UIComponentDemo'
 import { registerSW } from './utils/pwa'
 
 function App() {
@@ -24,6 +25,8 @@ function App() {
       </section>
 
       <StateDemo />
+      
+      <UIComponentDemo />
 
       <PWAInstallPrompt />
       <OfflineIndicator />
