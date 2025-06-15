@@ -25,3 +25,9 @@ export type { CalendarProps } from './Calendar';
 
 export { Modal } from './Modal';
 export type { ModalProps } from './Modal';
+
+export { Textarea } from './Textarea';
+export type { TextareaProps, TextareaRef } from './Textarea';
+
+export { Autocomplete } from './Autocomplete';
+export type { AutocompleteProps, AutocompleteOption } from './Autocomplete';
