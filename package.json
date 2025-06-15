@@ -22,9 +22,11 @@
   "dependencies": {
     "@reduxjs/toolkit": "^2.8.2",
     "@tailwindcss/postcss": "^4.1.10",
+    "@types/papaparse": "^5.3.16",
     "clsx": "^2.1.1",
     "firebase": "^11.9.1",
     "lucide-react": "^0.515.0",
+    "papaparse": "^5.5.3",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-redux": "^9.2.0",

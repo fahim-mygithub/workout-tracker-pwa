@@ -1,6 +1,5 @@
-import { 
+import type { 
   Token, 
-  TokenType, 
   Exercise, 
   ExerciseSet, 
   ExerciseGroup, 
@@ -13,6 +12,7 @@ import {
   Range,
   Tempo
 } from './types';
+import { TokenType } from './types';
 import { Tokenizer } from './tokenizer';
 import { ExerciseMatcher } from './exerciseDatabase';
 

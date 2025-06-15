@@ -8,13 +8,16 @@ import { ExerciseDetailModal } from '../components/exercise/ExerciseDetailModal'
 import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
 import { 
   searchExercises, 
-  clearSearch, 
-  setFilters, 
-  clearFilters 
+  clearFilter, 
+  updateFilter,
+  setLoading,
+  filterByMuscleGroup,
+  filterByEquipment
 } from '../store/slices/exerciseSlice';
-import { createWorkout } from '../store/slices/workoutSlice';
+import { startWorkout } from '../store/slices/workoutSlice';
 import type { RootState } from '../store';
-import type { Exercise, ExerciseFilter } from '../types/exercise';
+import type { Exercise } from '../types/exercise';
+import type { ExerciseFilter } from '../store/slices/exerciseSlice';
 import { Grid, LayoutGrid, List } from 'lucide-react';
 
 type ViewMode = 'grid' | 'list' | 'compact';
@@ -22,109 +25,93 @@ type ViewMode = 'grid' | 'list' | 'compact';
 export const ExercisesPage: React.FC = () => {
   const dispatch = useDispatch();
   const { 
-    exercises, 
-    searchTerm, 
-    filters, 
+    filteredExercises, 
+    filter, 
     isLoading, 
-    error, 
-    hasMore,
-    totalCount 
+    error,
+    exercises 
   } = useSelector((state: RootState) => state.exercise);
 
   // Local state
-  const [searchValue, setSearchValue] = useState(searchTerm);
+  const [searchValue, setSearchValue] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
-  const [page, setPage] = useState(1);
+  const [displayCount, setDisplayCount] = useState(20);
+
+  // Paginated exercises for display
+  const displayedExercises = useMemo(() => {
+    return filteredExercises.slice(0, displayCount);
+  }, [filteredExercises, displayCount]);
+
+  const hasMore = displayCount < filteredExercises.length;
 
   // Debounced search effect
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (searchValue !== searchTerm) {
-        handleSearch(searchValue);
-      }
+      dispatch(searchExercises(searchValue));
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [searchValue, searchTerm]);
+  }, [searchValue, dispatch]);
 
-  // Initial load
-  useEffect(() => {
-    if (exercises.length === 0 && !isLoading) {
-      handleSearch('', 1);
-    }
-  }, []);
-
-  const handleSearch = useCallback((term: string, pageNum: number = 1) => {
-    dispatch(searchExercises({
-      searchTerm: term,
-      filters,
-      page: pageNum,
-      limit: 20,
-    }));
-    setPage(pageNum);
-  }, [dispatch, filters]);
-
+  // Load more exercises for infinite scroll
   const handleLoadMore = useCallback(() => {
     if (hasMore && !isLoading) {
-      const nextPage = page + 1;
-      dispatch(searchExercises({
-        searchTerm: searchValue,
-        filters,
-        page: nextPage,
-        limit: 20,
-      }));
-      setPage(nextPage);
+      setDisplayCount(prev => Math.min(prev + 20, filteredExercises.length));
     }
-  }, [dispatch, searchValue, filters, page, hasMore, isLoading]);
+  }, [hasMore, isLoading, filteredExercises.length]);
 
   const handleFiltersChange = useCallback((newFilters: ExerciseFilter) => {
-    dispatch(setFilters(newFilters));
-    handleSearch(searchValue, 1);
-  }, [dispatch, searchValue, handleSearch]);
+    dispatch(updateFilter(newFilters));
+    
+    // Apply filters
+    if (newFilters.muscleGroup) {
+      dispatch(filterByMuscleGroup(newFilters.muscleGroup));
+    } else if (newFilters.equipment) {
+      dispatch(filterByEquipment(newFilters.equipment));
+    } else {
+      // If no specific filters, just search again
+      dispatch(searchExercises(searchValue));
+    }
+  }, [dispatch, searchValue]);
 
   const handleClearFilters = useCallback(() => {
-    dispatch(clearFilters());
-    handleSearch(searchValue, 1);
-  }, [dispatch, searchValue, handleSearch]);
+    dispatch(clearFilter());
+    setSearchValue('');
+  }, [dispatch]);
 
   const handleClearSearch = useCallback(() => {
     setSearchValue('');
-    dispatch(clearSearch());
-    handleSearch('', 1);
-  }, [dispatch, handleSearch]);
+    dispatch(searchExercises(''));
+  }, [dispatch]);
 
   const handleAddToWorkout = useCallback((exercise: Exercise) => {
     // Create a simple workout with this exercise
     const workout = {
       id: `workout-${Date.now()}`,
       name: `${exercise.name} Workout`,
-      groups: [{
-        id: `group-${Date.now()}`,
-        type: 'single' as const,
-        exercises: [{
-          id: exercise.id,
-          name: exercise.name,
-          muscleGroup: exercise.muscleGroup,
-          equipment: exercise.equipment,
-          sets: [{
-            id: `set-${Date.now()}`,
-            reps: 10,
-            weight: { value: 0, unit: 'lbs' as const },
-            rest: 60,
-            completed: false,
-          }],
+      exercises: [{
+        id: `exercise-${Date.now()}`,
+        exerciseId: exercise.id,
+        exerciseName: exercise.name,
+        sets: [{
+          id: `set-${Date.now()}`,
+          reps: 10,
+          weight: 100,
+          completed: false,
         }],
+        restTimeSeconds: 90,
+        completed: false,
       }],
-      totalTime: 0,
-      createdAt: new Date(),
+      currentExerciseIndex: 0,
+      currentSetIndex: 0,
     };
 
-    dispatch(createWorkout(workout));
+    dispatch(startWorkout(workout));
     
     // Show success message (you might want to add a toast notification)
-    console.log(`Added ${exercise.name} to workout`);
+    console.log(`Started workout with ${exercise.name}`);
   }, [dispatch]);
 
   // Infinite scroll setup
@@ -137,8 +124,8 @@ export const ExercisesPage: React.FC = () => {
 
   // Active filters count
   const activeFiltersCount = useMemo(() => {
-    return [filters.muscleGroup, filters.equipment, filters.difficulty].filter(Boolean).length;
-  }, [filters]);
+    return [filter.muscleGroup, filter.equipment, filter.difficulty].filter(Boolean).length;
+  }, [filter]);
 
   if (error) {
     return (
@@ -175,7 +162,7 @@ export const ExercisesPage: React.FC = () => {
           />
 
           <ExerciseFilters
-            filters={filters}
+            filters={filter}
             onFiltersChange={handleFiltersChange}
             onClearFilters={handleClearFilters}
             isVisible={showFilters}
@@ -186,7 +173,9 @@ export const ExercisesPage: React.FC = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Typography variant="body1" color="muted">
-              {totalCount > 0 ? `${totalCount} exercises found` : 'No exercises found'}
+              {filteredExercises.length > 0 
+                ? `${filteredExercises.length} exercises found` 
+                : 'No exercises found'}
             </Typography>
             
             {(searchValue || activeFiltersCount > 0) && (
@@ -228,13 +217,13 @@ export const ExercisesPage: React.FC = () => {
         </div>
 
         {/* Exercise List */}
-        {exercises.length > 0 ? (
+        {displayedExercises.length > 0 ? (
           <div className={`
             ${viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 
               viewMode === 'list' ? 'space-y-4' :
               'grid grid-cols-1 gap-2'}
           `}>
-            {exercises.map((exercise) => (
+            {displayedExercises.map((exercise) => (
               <ExerciseDirectoryCard
                 key={exercise.id}
                 exercise={exercise}
@@ -250,7 +239,9 @@ export const ExercisesPage: React.FC = () => {
               No exercises found
             </Typography>
             <Typography variant="body1" color="muted">
-              Try adjusting your search terms or filters
+              {exercises.length === 0 
+                ? 'No exercises loaded. Please check your database connection.'
+                : 'Try adjusting your search terms or filters'}
             </Typography>
           </div>
         ) : null}

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { WorkoutParser } from '../../parser';
-import type { ParseResult } from '../../parser/types';
+import type { ParseResult } from '../../parser';
 
 export const WorkoutParserDemo: React.FC = () => {
   const [input, setInput] = useState('5x5 Squat @225lbs\n3x8-12 RDL 185lbs\n4x10 Leg Press ss 4x15 Leg Curls');

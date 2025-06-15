@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useDispatch } from 'react-redux';
 import { startWorkout } from '../../store/slices/workoutSlice';
 import { WorkoutParser, ExerciseMatcher } from '../../parser';
-import type { ParseResult, ParseError, Exercise as ParsedExercise } from '../../parser/types';
+import type { ParseResult, ParseError, Exercise as ParsedExercise } from '../../parser';
 import type { ActiveWorkout, WorkoutExercise, WorkoutSet } from '../../store/slices/workoutSlice';
 import {
   Container,

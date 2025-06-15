@@ -10,8 +10,8 @@ export interface Exercise {
   mechanic: ExerciseMechanic | null;
   instructions: string[];
   searchKeywords: string[];
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface ExerciseRaw {
@@ -52,14 +52,7 @@ export type ExerciseMechanic =
   | 'Isolation' 
   | 'Compound';
 
-export interface ExerciseFilter {
-  muscleGroup?: string;
-  equipment?: string;
-  difficulty?: ExerciseDifficulty;
-  force?: ExerciseForce;
-  mechanic?: ExerciseMechanic;
-  searchTerm?: string;
-}
+// ExerciseFilter is defined in store/slices/exerciseSlice.ts
 
 export interface ExerciseSearchResult {
   exercises: Exercise[];

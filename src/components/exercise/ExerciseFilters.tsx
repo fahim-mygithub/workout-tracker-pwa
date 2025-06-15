@@ -1,7 +1,13 @@
 import React, { useState } from 'react';
 import { Card, CardContent, Button, Typography } from '../ui';
 import { ChevronDown, X, Check } from 'lucide-react';
-import type { ExerciseFilter } from '../../types/exercise';
+// Use the simpler ExerciseFilter from the store
+interface ExerciseFilter {
+  muscleGroup?: string;
+  equipment?: string;
+  difficulty?: string;
+  search?: string;
+}
 
 interface ExerciseFiltersProps {
   filters: ExerciseFilter;
