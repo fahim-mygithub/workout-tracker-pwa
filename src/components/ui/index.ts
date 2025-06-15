@@ -22,3 +22,6 @@ export type { ContainerProps, FlexProps, GridProps } from './Layout';
 
 export { Calendar } from './Calendar';
 export type { CalendarProps } from './Calendar';
+
+export { Modal } from './Modal';
+export type { ModalProps } from './Modal';
