@@ -1,7 +1,7 @@
 import React, { useEffect, useCallback, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { Button, Card, CardContent, Typography, Flex } from '../ui';
-import { cn } from '../../utils/cn';
+import { cn } from '../../lib/utils';
 import type { RootState } from '../../store/index';
 import { updateRestTimer, stopRestTimer, toggleAutoStartTimer } from '../../store/slices/workoutSlice';
 

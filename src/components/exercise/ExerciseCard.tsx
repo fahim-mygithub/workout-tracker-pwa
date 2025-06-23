@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
-import { Button, Card, CardContent, Typography, Flex, Input } from '../ui';
-import { cn } from '../../utils/cn';
+import { Button } from '../ui/Button';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
+import { Typography } from '../ui/Typography';
+import { Flex } from '../ui/Layout';
+import { Input } from '../ui/Input';
+import { cn } from '../../lib/utils';
 import type { WorkoutExercise, WorkoutSet } from '../../store/slices/workoutSlice';
 
 export type ExerciseCardState = 'pending' | 'active' | 'completed' | 'resting';
@@ -83,101 +87,15 @@ const SetRow: React.FC<SetRowProps> = ({
     return '-';
   };
 
-  return (
-    <div
-      className={cn(
-        'flex items-center justify-between p-3 border rounded-lg transition-colors',
-        {
-          'bg-blue-50 border-blue-200': isActive && !isCompleted,
-          'bg-green-50 border-green-200': isCompleted,
-          'bg-gray-50 border-gray-200': !isActive && !isCompleted,
-          'ring-2 ring-blue-400': isActive && !isCompleted,
-        }
-      )}
-    >
-      <div className="flex items-center space-x-4">
-        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 text-sm font-medium">
-          {index + 1}
-        </div>
-        
-        <div>
-          <Typography variant="body2" className="font-medium">
-            Target: {formatSetTarget()}
-          </Typography>
-          {isCompleted && (
-            <Typography variant="caption" color="secondary">
-              Actual: {formatSetActual()}
-            </Typography>
-          )}
-        </div>
-      </div>
-
-      <div className="flex items-center space-x-2">
-        {isActive && !isCompleted && !isEditing && (
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => setIsEditing(true)}
-          >
-            Complete Set
-          </Button>
-        )}
-
-        {isCompleted && !isEditing && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsEditing(true)}
-          >
-            Edit
-          </Button>
-        )}
-
-        {isEditing && (
-          <div className="flex items-center space-x-2">
-            {set.reps !== undefined && (
-              <Input
-                type="number"
-                placeholder="Reps"
-                value={editValues.actualReps}
-                onChange={(e) => setEditValues(prev => ({ ...prev, actualReps: parseInt(e.target.value) || 0 }))}
-                className="w-16 text-sm"
-              />
-            )}
-            {set.weight !== undefined && (
-              <Input
-                type="number"
-                placeholder="Weight"
-                value={editValues.actualWeight}
-                onChange={(e) => setEditValues(prev => ({ ...prev, actualWeight: parseInt(e.target.value) || 0 }))}
-                className="w-20 text-sm"
-              />
-            )}
-            {set.time !== undefined && (
-              <Input
-                type="number"
-                placeholder="Time (s)"
-                value={editValues.actualTime}
-                onChange={(e) => setEditValues(prev => ({ ...prev, actualTime: parseInt(e.target.value) || 0 }))}
-                className="w-20 text-sm"
-              />
-            )}
-            {set.distance !== undefined && (
-              <Input
-                type="number"
-                placeholder="Distance"
-                value={editValues.actualDistance}
-                onChange={(e) => setEditValues(prev => ({ ...prev, actualDistance: parseInt(e.target.value) || 0 }))}
-                className="w-20 text-sm"
-              />
-            )}
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={isCompleted ? handleEditSet : handleSaveSet}
-            >
-              Save
-            </Button>
+  if (isEditing) {
+    return (
+      <div className={cn(
+        'p-4 border-2 rounded-xl space-y-3 transition-all',
+        'bg-card border-primary shadow-sm'
+      )}>
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm font-medium text-muted-foreground">Set {index + 1}</span>
+          <div className="flex gap-2">
             <Button
               variant="ghost"
               size="sm"
@@ -185,7 +103,125 @@ const SetRow: React.FC<SetRowProps> = ({
             >
               Cancel
             </Button>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={isCompleted ? handleEditSet : handleSaveSet}
+            >
+              Save
+            </Button>
           </div>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-3">
+          {set.reps !== undefined && (
+            <div>
+              <label className="text-xs text-muted-foreground font-medium block mb-1">Reps</label>
+              <Input
+                type="number"
+                inputMode="numeric"
+                value={editValues.actualReps}
+                onChange={(e) => setEditValues(prev => ({ ...prev, actualReps: parseInt(e.target.value) || 0 }))}
+                className="h-12 text-lg font-semibold text-center"
+              />
+            </div>
+          )}
+          {set.weight !== undefined && (
+            <div>
+              <label className="text-xs text-muted-foreground font-medium block mb-1">Weight (lbs)</label>
+              <Input
+                type="number"
+                inputMode="decimal"
+                value={editValues.actualWeight}
+                onChange={(e) => setEditValues(prev => ({ ...prev, actualWeight: parseFloat(e.target.value) || 0 }))}
+                className="h-12 text-lg font-semibold text-center"
+              />
+            </div>
+          )}
+          {set.time !== undefined && (
+            <div>
+              <label className="text-xs text-muted-foreground font-medium block mb-1">Time (sec)</label>
+              <Input
+                type="number"
+                inputMode="numeric"
+                value={editValues.actualTime}
+                onChange={(e) => setEditValues(prev => ({ ...prev, actualTime: parseInt(e.target.value) || 0 }))}
+                className="h-12 text-lg font-semibold text-center"
+              />
+            </div>
+          )}
+          {set.distance !== undefined && (
+            <div>
+              <label className="text-xs text-muted-foreground font-medium block mb-1">Distance (m)</label>
+              <Input
+                type="number"
+                inputMode="numeric"
+                value={editValues.actualDistance}
+                onChange={(e) => setEditValues(prev => ({ ...prev, actualDistance: parseInt(e.target.value) || 0 }))}
+                className="h-12 text-lg font-semibold text-center"
+              />
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={cn(
+        'flex items-center justify-between p-4 rounded-xl transition-all',
+        'border-2',
+        {
+          'bg-primary/5 border-primary shadow-sm': isActive && !isCompleted,
+          'bg-green-500/5 border-green-500/20': isCompleted,
+          'bg-muted/20 border-muted/30': !isActive && !isCompleted,
+        }
+      )}
+    >
+      <div className="flex items-center gap-4">
+        <div className={cn(
+          'flex items-center justify-center w-10 h-10 rounded-full text-sm font-bold transition-all',
+          {
+            'bg-primary text-primary-foreground': isActive && !isCompleted,
+            'bg-green-500/20 text-green-700': isCompleted,
+            'bg-muted/50 text-muted-foreground': !isActive && !isCompleted,
+          }
+        )}>
+          {isCompleted ? '✓' : index + 1}
+        </div>
+        
+        <div>
+          <div className="font-medium text-base">
+            {formatSetTarget()}
+          </div>
+          {isCompleted && (
+            <div className="text-sm text-muted-foreground">
+              Actual: {formatSetActual()}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div>
+        {isActive && !isCompleted && (
+          <Button
+            variant="default"
+            size="default"
+            onClick={() => setIsEditing(true)}
+          >
+            Complete
+          </Button>
+        )}
+
+        {isCompleted && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsEditing(true)}
+          >
+            Edit
+          </Button>
         )}
       </div>
     </div>
@@ -210,30 +246,10 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
   const isCompleted = state === 'completed' || completedSets === totalSets;
   const isResting = state === 'resting';
 
-  const getStateIcon = () => {
-    switch (state) {
-      case 'completed':
-        return '✅';
-      case 'active':
-        return '🏋️';
-      case 'resting':
-        return '⏳';
-      default:
-        return '⭕';
-    }
-  };
-
-  const getStateColor = () => {
-    switch (state) {
-      case 'completed':
-        return 'border-green-500 bg-green-50';
-      case 'active':
-        return 'border-blue-500 bg-blue-50';
-      case 'resting':
-        return 'border-orange-500 bg-orange-50';
-      default:
-        return 'border-gray-200 bg-white';
-    }
+  const getCardVariant = (): 'default' | 'outlined' | 'elevated' | 'interactive' => {
+    if (isCurrentExercise && !isCompleted) return 'elevated';
+    if (isCompleted) return 'outlined';
+    return 'default';
   };
 
   const handleSetComplete = (setId: string, setData: Partial<WorkoutSet>) => {
@@ -256,70 +272,83 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
   };
 
   return (
-    <Card className={cn('transition-all duration-200', getStateColor(), className)}>
-      <CardContent className="p-4">
-        {/* Exercise Header */}
-        <Flex justify="between" align="center" className="mb-4">
-          <div className="flex items-center space-x-3">
-            <span className="text-2xl">{getStateIcon()}</span>
-            <div>
-              <Typography variant="h5" className="font-semibold">
-                {exercise.exerciseName}
-              </Typography>
-              <Typography variant="caption" color="secondary">
-                {completedSets}/{totalSets} sets • {exercise.restTimeSeconds ? `${exercise.restTimeSeconds}s rest` : 'No rest'}
-              </Typography>
+    <Card 
+      variant={getCardVariant()}
+      className={cn(
+        'transition-all duration-300',
+        {
+          'ring-2 ring-primary': isCurrentExercise && state === 'active',
+          'opacity-60': isCompleted,
+        },
+        className
+      )}
+    >
+      <CardHeader className="pb-4">
+        <div className="flex justify-between items-start">
+          <div>
+            <CardTitle className="text-xl">{exercise.exerciseName}</CardTitle>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-sm text-muted-foreground">
+                {completedSets}/{totalSets} sets
+              </span>
+              {exercise.restTimeSeconds && (
+                <>
+                  <span className="text-muted-foreground">•</span>
+                  <span className="text-sm text-muted-foreground">
+                    {exercise.restTimeSeconds}s rest
+                  </span>
+                </>
+              )}
             </div>
           </div>
           
-          {isCurrentExercise && (
-            <div className="px-2 py-1 bg-blue-100 text-blue-800 rounded-md text-xs font-medium">
-              Current
+          {isCurrentExercise && !isCompleted && (
+            <div className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium">
+              Active
             </div>
           )}
-        </Flex>
+          
+          {isCompleted && (
+            <div className="px-3 py-1 bg-green-500/10 text-green-600 rounded-full text-sm font-medium">
+              Done
+            </div>
+          )}
+        </div>
+      </CardHeader>
 
+      <CardContent className="space-y-4">
         {/* Rest Timer */}
         {isResting && restTimeRemaining !== undefined && (
-          <div className="mb-4 p-3 bg-orange-100 border border-orange-200 rounded-lg">
-            <Flex justify="between" align="center">
+          <div className="p-4 bg-orange-500/5 border-2 border-orange-500/20 rounded-xl">
+            <div className="flex justify-between items-center">
               <div>
-                <Typography variant="body2" className="font-medium text-orange-800">
-                  Rest Time
-                </Typography>
-                <Typography variant="h4" className="font-bold text-orange-600">
+                <p className="text-sm font-medium text-orange-900">Rest Time</p>
+                <p className="text-3xl font-bold text-orange-600 mt-1">
                   {formatRestTime(restTimeRemaining)}
-                </Typography>
+                </p>
               </div>
               <Button
                 variant="outline"
-                size="sm"
+                size="default"
                 onClick={() => onSkipRest?.(exercise.id)}
                 className="border-orange-300 text-orange-700 hover:bg-orange-50"
               >
                 Skip Rest
               </Button>
-            </Flex>
+            </div>
           </div>
         )}
 
         {/* Exercise Notes */}
         {exercise.notes && (
-          <div className="mb-4 p-2 bg-gray-50 rounded border">
-            <Typography variant="caption" color="secondary" className="font-medium">
-              Notes:
-            </Typography>
-            <Typography variant="body2">
-              {exercise.notes}
-            </Typography>
+          <div className="p-3 bg-muted/30 rounded-lg">
+            <p className="text-xs font-medium text-muted-foreground mb-1">Notes</p>
+            <p className="text-sm">{exercise.notes}</p>
           </div>
         )}
 
         {/* Sets */}
-        <div className="space-y-2">
-          <Typography variant="body2" className="font-medium text-gray-700">
-            Sets
-          </Typography>
+        <div className="space-y-3">
           {exercise.sets.map((set, index) => (
             <SetRow
               key={set.id}
@@ -335,33 +364,17 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
 
         {/* Exercise Actions */}
         {isCurrentExercise && !isCompleted && !isResting && (
-          <div className="mt-4 pt-3 border-t">
-            <Flex justify="between">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onExerciseComplete?.(exercise.id)}
-              >
-                Skip Exercise
-              </Button>
-              {completedSets > 0 && (
-                <Typography variant="caption" color="secondary">
-                  {completedSets}/{totalSets} sets completed
-                </Typography>
-              )}
-            </Flex>
-          </div>
-        )}
-
-        {/* Completed Exercise Summary */}
-        {isCompleted && (
-          <div className="mt-4 pt-3 border-t border-green-200">
-            <Typography variant="body2" className="text-green-700 font-medium">
-              ✅ Exercise completed!
-            </Typography>
-            <Typography variant="caption" color="secondary">
-              All {totalSets} sets finished
-            </Typography>
+          <div className="pt-4 flex justify-between items-center">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onExerciseComplete?.(exercise.id)}
+            >
+              Skip Exercise
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              {completedSets > 0 && `${completedSets}/${totalSets} completed`}
+            </span>
           </div>
         )}
       </CardContent>

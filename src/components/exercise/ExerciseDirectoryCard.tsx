@@ -1,12 +1,14 @@
 import React from 'react';
 import { Card, CardContent, Typography, Button } from '../ui';
-import { PlayCircle, Info, Plus } from 'lucide-react';
+import { PlayCircle, Info, Plus, Play } from 'lucide-react';
 import type { Exercise } from '../../types/exercise';
 
 interface ExerciseDirectoryCardProps {
   exercise: Exercise;
   onViewDetails: (exercise: Exercise) => void;
   onAddToWorkout: (exercise: Exercise) => void;
+  onFilterByMuscleGroup?: (muscleGroup: string) => void;
+  onFilterByDifficulty?: (difficulty: string) => void;
   isCompact?: boolean;
 }
 
@@ -14,6 +16,8 @@ export const ExerciseDirectoryCard: React.FC<ExerciseDirectoryCardProps> = ({
   exercise,
   onViewDetails,
   onAddToWorkout,
+  onFilterByMuscleGroup,
+  onFilterByDifficulty,
   isCompact = false,
 }) => {
   const getDifficultyColor = (difficulty: string) => {
@@ -51,11 +55,21 @@ export const ExerciseDirectoryCard: React.FC<ExerciseDirectoryCardProps> = ({
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
-              <Typography variant="h6" className="truncate">
+              <Typography 
+                variant="h6" 
+                className="truncate cursor-pointer hover:text-blue-600 transition-colors"
+                onClick={() => onViewDetails(exercise)}
+              >
                 {exercise.name}
               </Typography>
               <div className="flex items-center gap-2 mt-1">
-                <span className={`text-xs px-2 py-1 rounded-full ${getMuscleGroupColor(exercise.muscleGroup)}`}>
+                <span 
+                  className={`text-xs px-2 py-1 rounded-full cursor-pointer hover:opacity-80 transition-opacity ${getMuscleGroupColor(exercise.muscleGroup)}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onFilterByMuscleGroup?.(exercise.muscleGroup);
+                  }}
+                >
                   {exercise.muscleGroup}
                 </span>
                 <span className="text-xs text-gray-500">
@@ -93,17 +107,33 @@ export const ExerciseDirectoryCard: React.FC<ExerciseDirectoryCardProps> = ({
         {/* Header */}
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1">
-            <Typography variant="h5" className="group-hover:text-blue-600 transition-colors">
+            <Typography 
+              variant="h5" 
+              className="group-hover:text-blue-600 transition-colors cursor-pointer"
+              onClick={() => onViewDetails(exercise)}
+            >
               {exercise.name}
             </Typography>
             
             {/* Tags */}
             <div className="flex flex-wrap gap-2 mt-2">
-              <span className={`text-sm px-3 py-1 rounded-full font-medium ${getMuscleGroupColor(exercise.muscleGroup)}`}>
+              <span 
+                className={`text-sm px-3 py-1 rounded-full font-medium cursor-pointer hover:opacity-80 transition-opacity ${getMuscleGroupColor(exercise.muscleGroup)}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onFilterByMuscleGroup?.(exercise.muscleGroup);
+                }}
+              >
                 {exercise.muscleGroup}
               </span>
               
-              <span className={`text-sm px-3 py-1 rounded-full font-medium ${getDifficultyColor(exercise.difficulty)}`}>
+              <span 
+                className={`text-sm px-3 py-1 rounded-full font-medium cursor-pointer hover:opacity-80 transition-opacity ${getDifficultyColor(exercise.difficulty)}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onFilterByDifficulty?.(exercise.difficulty);
+                }}
+              >
                 {exercise.difficulty}
               </span>
             </div>
@@ -112,7 +142,10 @@ export const ExerciseDirectoryCard: React.FC<ExerciseDirectoryCardProps> = ({
           {/* Video indicator */}
           {exercise.videoLinks.length > 0 && (
             <div className="flex-shrink-0 ml-4">
-              <div className="flex items-center gap-1 text-blue-600 bg-blue-50 px-2 py-1 rounded">
+              <div 
+                className="flex items-center gap-1 text-blue-600 bg-blue-50 px-2 py-1 rounded cursor-pointer hover:bg-blue-100 transition-colors"
+                onClick={() => onViewDetails(exercise)}
+              >
                 <PlayCircle className="w-4 h-4" />
                 <span className="text-xs font-medium">Video</span>
               </div>
@@ -120,40 +153,72 @@ export const ExerciseDirectoryCard: React.FC<ExerciseDirectoryCardProps> = ({
           )}
         </div>
 
-        {/* Equipment and mechanics */}
-        <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
-          <div>
-            <Typography variant="body2" color="muted" className="font-medium mb-1">
-              Equipment
-            </Typography>
-            <Typography variant="body2">
-              {exercise.equipment}
-            </Typography>
+        {/* Main content area with video thumbnail */}
+        <div className="flex gap-4 mb-4">
+          {/* Left content */}
+          <div className="flex-1">
+            {/* Equipment and mechanics */}
+            <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
+              <div>
+                <Typography variant="body2" color="muted" className="font-medium mb-1">
+                  Equipment
+                </Typography>
+                <Typography variant="body2">
+                  {exercise.equipment}
+                </Typography>
+              </div>
+              
+              {exercise.mechanic && (
+                <div>
+                  <Typography variant="body2" color="muted" className="font-medium mb-1">
+                    Type
+                  </Typography>
+                  <Typography variant="body2">
+                    {exercise.mechanic}
+                  </Typography>
+                </div>
+              )}
+            </div>
+
+            {/* Instructions preview */}
+            {exercise.instructions.length > 0 && (
+              <div className="cursor-pointer" onClick={() => onViewDetails(exercise)}>
+                <Typography variant="body2" color="muted" className="font-medium mb-1">
+                  Instructions
+                </Typography>
+                <Typography variant="body2" className="line-clamp-2 hover:text-blue-600 transition-colors">
+                  {exercise.instructions[0]}
+                </Typography>
+              </div>
+            )}
           </div>
-          
-          {exercise.mechanic && (
-            <div>
-              <Typography variant="body2" color="muted" className="font-medium mb-1">
-                Type
-              </Typography>
-              <Typography variant="body2">
-                {exercise.mechanic}
-              </Typography>
+
+          {/* Video thumbnail */}
+          {exercise.videoLinks.length > 0 && (
+            <div className="flex-shrink-0">
+              <div 
+                className="w-32 h-20 bg-gray-900 rounded-lg overflow-hidden relative cursor-pointer group shadow-md"
+                onClick={() => onViewDetails(exercise)}
+              >
+                <video
+                  className="w-full h-full object-cover"
+                  preload="metadata"
+                  muted
+                  poster=""
+                >
+                  <source src={exercise.videoLinks[0]} type="video/mp4" />
+                </video>
+                
+                {/* Overlay */}
+                <div className="absolute inset-0 bg-black bg-opacity-20 group-hover:bg-opacity-10 transition-all duration-200 flex items-center justify-center">
+                  <div className="text-center text-white">
+                    <Play className="w-6 h-6 opacity-80" />
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </div>
-
-        {/* Instructions preview */}
-        {exercise.instructions.length > 0 && (
-          <div className="mb-4">
-            <Typography variant="body2" color="muted" className="font-medium mb-1">
-              Instructions
-            </Typography>
-            <Typography variant="body2" className="line-clamp-2">
-              {exercise.instructions[0]}
-            </Typography>
-          </div>
-        )}
 
         {/* Action buttons */}
         <div className="flex items-center justify-between pt-4 border-t border-gray-100">
@@ -168,7 +233,7 @@ export const ExerciseDirectoryCard: React.FC<ExerciseDirectoryCardProps> = ({
           </Button>
           
           <Button
-            variant="primary"
+            variant="secondary"
             size="sm"
             onClick={() => onAddToWorkout(exercise)}
             className="flex items-center gap-2"

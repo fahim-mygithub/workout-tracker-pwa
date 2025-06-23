@@ -61,7 +61,7 @@ export const WorkoutPage: React.FC = () => {
 
   if (!activeWorkout) {
     return (
-      <Container maxWidth="lg" padding="lg">
+      <Container maxWidth="5xl" padding="lg">
         <Alert variant="warning" title="No active workout found. Redirecting to home..." />
       </Container>
     );

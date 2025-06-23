@@ -10,13 +10,13 @@ describe('Button', () => {
   it('applies correct variant styles', () => {
     render(<Button variant="primary">Primary</Button>);
     const button = screen.getByRole('button');
-    expect(button).toHaveClass('bg-blue-600');
+    expect(button).toHaveClass('bg-primary', 'text-primary-foreground');
   });
 
   it('applies correct size styles', () => {
     render(<Button size="lg">Large</Button>);
     const button = screen.getByRole('button');
-    expect(button).toHaveClass('px-6', 'py-3', 'text-lg');
+    expect(button).toHaveClass('h-14', 'px-8', 'py-4', 'text-base', 'min-w-[140px]');
   });
 
   it('shows loading spinner when loading', () => {

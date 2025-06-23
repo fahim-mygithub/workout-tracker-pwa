@@ -1,5 +1,5 @@
 import React from 'react';
-import { cn } from '../../utils/cn';
+import { cn } from '../../lib/utils';
 
 export interface TypographyProps extends React.HTMLAttributes<HTMLElement> {
   variant?: 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'body1' | 'body2' | 'caption' | 'overline';
@@ -8,9 +8,9 @@ export interface TypographyProps extends React.HTMLAttributes<HTMLElement> {
 }
 
 const typographyVariants = {
-  h1: 'text-4xl font-bold leading-tight',
-  h2: 'text-3xl font-bold leading-tight',
-  h3: 'text-2xl font-semibold leading-tight',
+  h1: 'text-4xl font-bold leading-tight tracking-tight',
+  h2: 'text-3xl font-bold leading-tight tracking-tight',
+  h3: 'text-2xl font-semibold leading-tight tracking-tight',
   h4: 'text-xl font-semibold leading-tight',
   h5: 'text-lg font-semibold leading-tight',
   h6: 'text-base font-semibold leading-tight',
@@ -21,12 +21,12 @@ const typographyVariants = {
 };
 
 const typographyColors = {
-  primary: 'text-gray-900',
-  secondary: 'text-gray-600',
+  primary: 'text-foreground',
+  secondary: 'text-muted-foreground',
   success: 'text-green-600',
-  warning: 'text-yellow-600',
-  error: 'text-red-600',
-  muted: 'text-gray-500'
+  warning: 'text-orange-600',
+  error: 'text-destructive',
+  muted: 'text-muted-foreground'
 };
 
 const defaultComponents = {

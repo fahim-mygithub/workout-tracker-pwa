@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Modal, Typography, Button, Card, CardContent } from '../ui';
-import { PlayCircle, Plus, X, ExternalLink, Target, Zap, Settings } from 'lucide-react';
+import { PlayCircle, Plus, X, ExternalLink, Target, Zap, Settings, AlertCircle } from 'lucide-react';
 import type { Exercise } from '../../types/exercise';
 
 interface ExerciseDetailModalProps {
@@ -17,6 +17,18 @@ export const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({
   onAddToWorkout,
 }) => {
   const [activeVideoIndex, setActiveVideoIndex] = useState(0);
+  const [videoError, setVideoError] = useState(false);
+  const [videoLoading, setVideoLoading] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Reset video states when exercise changes
+  useEffect(() => {
+    if (exercise?.videoLinks.length > 0) {
+      setActiveVideoIndex(0);
+      setVideoError(false);
+      setVideoLoading(true);
+    }
+  }, [exercise?.id]);
 
   if (!exercise) return null;
 
@@ -52,6 +64,33 @@ export const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({
   const handleAddToWorkout = () => {
     onAddToWorkout(exercise);
     onClose();
+  };
+
+  const handleVideoSelect = (index: number) => {
+    if (index !== activeVideoIndex) {
+      setActiveVideoIndex(index);
+      setVideoError(false);
+      setVideoLoading(true);
+      
+      // Reset video element
+      if (videoRef.current) {
+        videoRef.current.load();
+      }
+    }
+  };
+
+  const handleVideoLoad = () => {
+    setVideoLoading(false);
+    setVideoError(false);
+  };
+
+  const handleVideoError = () => {
+    setVideoLoading(false);
+    setVideoError(true);
+  };
+
+  const handleOpenExternalVideo = (link: string) => {
+    window.open(link, '_blank', 'noopener,noreferrer');
   };
 
   return (
@@ -106,27 +145,69 @@ export const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({
                   </div>
                   
                   <div className="space-y-4">
-                    {/* Video player placeholder */}
-                    <div className="aspect-video bg-gray-100 rounded-lg flex items-center justify-center">
-                      <div className="text-center">
-                        <PlayCircle className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                        <Typography variant="body2" color="muted">
-                          Video preview will be available soon
-                        </Typography>
-                      </div>
+                    {/* Video player */}
+                    <div className="aspect-video bg-gray-900 rounded-lg overflow-hidden relative">
+                      {videoError ? (
+                        <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+                          <div className="text-center">
+                            <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-2" />
+                            <Typography variant="body2" color="muted" className="mb-2">
+                              Video failed to load
+                            </Typography>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleOpenExternalVideo(exercise.videoLinks[activeVideoIndex])}
+                              className="flex items-center gap-2"
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                              Open in new tab
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          {videoLoading && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-gray-100 z-10">
+                              <div className="text-center">
+                                <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-2"></div>
+                                <Typography variant="body2" color="muted">
+                                  Loading video...
+                                </Typography>
+                              </div>
+                            </div>
+                          )}
+                          <video
+                            ref={videoRef}
+                            className="w-full h-full object-contain"
+                            controls
+                            preload="metadata"
+                            onLoadedData={handleVideoLoad}
+                            onError={handleVideoError}
+                            onLoadStart={() => setVideoLoading(true)}
+                          >
+                            <source src={exercise.videoLinks[activeVideoIndex]} type="video/mp4" />
+                            Your browser does not support the video tag.
+                          </video>
+                        </>
+                      )}
                     </div>
                     
-                    {/* Video links */}
+                    {/* Video selection buttons */}
                     <div className="flex flex-wrap gap-2">
                       {exercise.videoLinks.map((link, index) => (
                         <Button
                           key={index}
                           variant="outline"
                           size="sm"
-                          onClick={() => window.open(link, '_blank')}
-                          className="flex items-center gap-2"
+                          onClick={() => handleVideoSelect(index)}
+                          className={`flex items-center gap-2 ${
+                            activeVideoIndex === index 
+                              ? 'bg-gray-100 border-gray-300 text-gray-900 font-medium' 
+                              : 'hover:bg-gray-50'
+                          }`}
                         >
-                          <ExternalLink className="w-4 h-4" />
+                          <PlayCircle className="w-4 h-4" />
                           Video {index + 1}
                         </Button>
                       ))}
@@ -260,13 +341,6 @@ export const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({
 
         {/* Footer */}
         <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200">
-          <Button
-            variant="outline"
-            onClick={onClose}
-          >
-            Close
-          </Button>
-          
           <Button
             variant="primary"
             onClick={handleAddToWorkout}

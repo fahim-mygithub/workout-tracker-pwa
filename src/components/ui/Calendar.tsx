@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Button } from './Button';
 import { Typography } from './Typography';
 import { Card, CardContent } from './Card';
-import { cn } from '../../utils/cn';
+import { cn } from '../../lib/utils';
 
 export interface CalendarProps {
   selectedDate?: Date;
@@ -89,36 +89,40 @@ export const Calendar: React.FC<CalendarProps> = ({
   }
 
   return (
-    <Card className={cn('w-full max-w-sm', className)}>
-      <CardContent className="p-4">
+    <div className={cn('w-full', className)}>
+      <div className="relative">
         {/* Month navigation */}
         <div className="flex items-center justify-between mb-4">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => navigateMonth('prev')}
-            className="h-8 w-8 p-0"
+            className="h-8 w-8 p-0 rounded-full hover:bg-primary/10 transition-colors duration-200"
           >
-            ←
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
           </Button>
-          <Typography variant="h6" className="font-semibold">
+          <Typography variant="h6" className="font-semibold text-slate-800">
             {monthName}
           </Typography>
           <Button
             variant="ghost"
             size="sm"
             onClick={() => navigateMonth('next')}
-            className="h-8 w-8 p-0"
+            className="h-8 w-8 p-0 rounded-full hover:bg-primary/10 transition-colors duration-200"
           >
-            →
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
           </Button>
         </div>
 
         {/* Week day headers */}
-        <div className="grid grid-cols-7 gap-1 mb-2">
+        <div className="grid grid-cols-7 gap-1 mb-3">
           {weekDays.map(day => (
-            <div key={day} className="text-center p-2">
-              <Typography variant="caption" color="secondary" className="font-medium">
+            <div key={day} className="text-center p-1">
+              <Typography variant="caption" className="font-semibold text-slate-500 text-xs">
                 {day}
               </Typography>
             </div>
@@ -147,23 +151,26 @@ export const Calendar: React.FC<CalendarProps> = ({
                 onClick={() => handleDateClick(day)}
                 disabled={isDisabled}
                 className={cn(
-                  'h-10 w-full rounded-md text-sm font-medium transition-colors',
-                  'hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500',
+                  'relative h-10 w-full rounded-xl text-sm font-medium transition-all duration-200',
+                  'hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary/50',
                   {
-                    'bg-blue-500 text-white hover:bg-blue-600': isSelected,
-                    'bg-green-100 text-green-800': isHighlighted && !isSelected,
-                    'ring-2 ring-blue-400': isToday && !isSelected,
-                    'text-slate-400 cursor-not-allowed hover:bg-transparent': isDisabled,
-                    'text-slate-900': !isDisabled && !isSelected && !isHighlighted,
+                    'bg-gradient-to-br from-primary to-primary/80 text-white shadow-md hover:shadow-lg': isSelected,
+                    'bg-green-100 text-green-700 font-semibold': isHighlighted && !isSelected,
+                    'ring-2 ring-primary/30 ring-offset-1': isToday && !isSelected,
+                    'text-slate-300 cursor-not-allowed hover:scale-100': isDisabled,
+                    'text-slate-700 hover:bg-slate-100': !isDisabled && !isSelected && !isHighlighted,
                   }
                 )}
               >
                 {day}
+                {isHighlighted && !isSelected && (
+                  <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-green-600 rounded-full" />
+                )}
               </button>
             );
           })}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };

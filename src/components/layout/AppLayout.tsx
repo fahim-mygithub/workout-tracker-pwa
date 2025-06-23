@@ -3,12 +3,22 @@ import { Outlet } from 'react-router-dom';
 import { BottomNavigation } from '../navigation/BottomNavigation';
 import PWAInstallPrompt from '../PWAInstallPrompt';
 import OfflineIndicator from '../OfflineIndicator';
+import { cn } from '../../lib/utils';
 
 export const AppLayout: React.FC = () => {
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className={cn(
+      'min-h-screen bg-background text-foreground',
+      'flex flex-col',
+      'antialiased'
+    )}>
       {/* Main Content Area */}
-      <main className="flex-1 pb-20 overflow-auto">
+      <main className={cn(
+        'flex-1',
+        'pb-24', // Increased padding for bottom navigation
+        'overflow-auto',
+        'relative'
+      )}>
         <Outlet />
       </main>
 

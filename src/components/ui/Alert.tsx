@@ -1,5 +1,5 @@
 import React from 'react';
-import { cn } from '../../utils/cn';
+import { cn } from '../../lib/utils';
 
 export interface AlertProps extends React.HTMLAttributes<HTMLDivElement> {
   variant?: 'info' | 'success' | 'warning' | 'error';

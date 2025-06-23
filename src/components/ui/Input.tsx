@@ -1,5 +1,5 @@
 import React from 'react';
-import { cn } from '../../utils/cn';
+import { cn } from '../../lib/utils';
 
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
@@ -24,13 +24,13 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
     const inputId = React.useId();
     
     return (
-      <div className="space-y-1">
+      <div className="space-y-1.5">
         {label && (
           <label 
             htmlFor={inputId}
             className={cn(
               'block text-sm font-medium',
-              error ? 'text-red-700' : 'text-gray-700'
+              error ? 'text-destructive' : 'text-foreground'
             )}
           >
             {label}
@@ -40,7 +40,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         <div className="relative">
           {leftIcon && (
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <div className="h-5 w-5 text-gray-400">
+              <div className="h-5 w-5 text-muted-foreground">
                 {leftIcon}
               </div>
             </div>
@@ -50,15 +50,17 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             id={inputId}
             type={type}
             className={cn(
-              'block w-full rounded-md border shadow-sm',
-              'px-3 py-2 text-sm placeholder-gray-400',
-              'focus:outline-none focus:ring-2 focus:ring-offset-2',
-              'disabled:opacity-50 disabled:cursor-not-allowed',
+              'flex w-full rounded-lg border-2 bg-background px-3 py-3 text-base',
+              'placeholder:text-muted-foreground',
+              'transition-all duration-200',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+              'disabled:cursor-not-allowed disabled:opacity-50',
+              'h-12',
               leftIcon && 'pl-10',
               rightIcon && 'pr-10',
               error 
-                ? 'border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500' 
-                : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500',
+                ? 'border-destructive text-destructive focus-visible:ring-destructive' 
+                : 'border-input hover:border-muted-foreground/50',
               className
             )}
             disabled={disabled}
@@ -68,7 +70,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           
           {rightIcon && (
             <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
-              <div className="h-5 w-5 text-gray-400">
+              <div className="h-5 w-5 text-muted-foreground">
                 {rightIcon}
               </div>
             </div>
@@ -76,13 +78,13 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         </div>
         
         {error && (
-          <p className="text-sm text-red-600" role="alert">
+          <p className="text-sm text-destructive" role="alert">
             {error}
           </p>
         )}
         
         {helperText && !error && (
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-muted-foreground">
             {helperText}
           </p>
         )}

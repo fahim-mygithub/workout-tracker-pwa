@@ -3,7 +3,7 @@ import { Container, Typography, Card, CardContent, Alert } from '../components/u
 
 export const ProfilePage: React.FC = () => {
   return (
-    <Container maxWidth="xl" padding="lg">
+    <Container maxWidth="4xl" padding="lg">
       <div className="space-y-6">
         <Typography variant="h1" className="text-center">
           Profile & Settings

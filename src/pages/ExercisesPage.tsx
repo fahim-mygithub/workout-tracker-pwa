@@ -10,7 +10,6 @@ import {
   searchExercises, 
   clearFilter, 
   updateFilter,
-  setLoading,
   filterByMuscleGroup,
   filterByEquipment
 } from '../store/slices/exerciseSlice';
@@ -18,9 +17,9 @@ import { startWorkout } from '../store/slices/workoutSlice';
 import type { RootState } from '../store';
 import type { Exercise } from '../types/exercise';
 import type { ExerciseFilter } from '../store/slices/exerciseSlice';
-import { Grid, LayoutGrid, List } from 'lucide-react';
+import { Grid, List } from 'lucide-react';
 
-type ViewMode = 'grid' | 'list' | 'compact';
+type ViewMode = 'list' | 'compact';
 
 export const ExercisesPage: React.FC = () => {
   const dispatch = useDispatch();
@@ -36,7 +35,7 @@ export const ExercisesPage: React.FC = () => {
   const [searchValue, setSearchValue] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [displayCount, setDisplayCount] = useState(20);
 
   // Paginated exercises for display
@@ -114,6 +113,20 @@ export const ExercisesPage: React.FC = () => {
     console.log(`Started workout with ${exercise.name}`);
   }, [dispatch]);
 
+  const handleFilterByMuscleGroup = useCallback((muscleGroup: string) => {
+    const newFilters = { ...filter, muscleGroup };
+    dispatch(updateFilter(newFilters));
+    dispatch(filterByMuscleGroup(muscleGroup));
+    setShowFilters(true);
+  }, [dispatch, filter]);
+
+  const handleFilterByDifficulty = useCallback((difficulty: string) => {
+    const newFilters = { ...filter, difficulty };
+    dispatch(updateFilter(newFilters));
+    dispatch(searchExercises(searchValue)); // Re-apply search with new difficulty filter
+    setShowFilters(true);
+  }, [dispatch, filter, searchValue]);
+
   // Infinite scroll setup
   const { ref: loadMoreRef } = useInfiniteScroll({
     hasNextPage: hasMore,
@@ -129,7 +142,7 @@ export const ExercisesPage: React.FC = () => {
 
   if (error) {
     return (
-      <Container maxWidth="xl" padding="lg">
+      <Container maxWidth="6xl" padding="lg">
         <Alert variant="destructive" title="Error Loading Exercises">
           {error}
         </Alert>
@@ -138,7 +151,7 @@ export const ExercisesPage: React.FC = () => {
   }
 
   return (
-    <Container maxWidth="xl" padding="lg">
+    <Container maxWidth="6xl" padding="lg">
       <div className="space-y-6">
         {/* Header */}
         <div className="text-center">
@@ -196,12 +209,6 @@ export const ExercisesPage: React.FC = () => {
           {/* View Mode Toggle */}
           <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
             <button
-              onClick={() => setViewMode('grid')}
-              className={`p-2 rounded ${viewMode === 'grid' ? 'bg-white shadow-sm' : 'hover:bg-gray-200'}`}
-            >
-              <LayoutGrid className="w-4 h-4" />
-            </button>
-            <button
               onClick={() => setViewMode('list')}
               className={`p-2 rounded ${viewMode === 'list' ? 'bg-white shadow-sm' : 'hover:bg-gray-200'}`}
             >
@@ -219,9 +226,7 @@ export const ExercisesPage: React.FC = () => {
         {/* Exercise List */}
         {displayedExercises.length > 0 ? (
           <div className={`
-            ${viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 
-              viewMode === 'list' ? 'space-y-4' :
-              'grid grid-cols-1 gap-2'}
+            ${viewMode === 'list' ? 'space-y-4' : 'grid grid-cols-1 gap-2'}
           `}>
             {displayedExercises.map((exercise) => (
               <ExerciseDirectoryCard
@@ -229,6 +234,8 @@ export const ExercisesPage: React.FC = () => {
                 exercise={exercise}
                 onViewDetails={setSelectedExercise}
                 onAddToWorkout={handleAddToWorkout}
+                onFilterByMuscleGroup={handleFilterByMuscleGroup}
+                onFilterByDifficulty={handleFilterByDifficulty}
                 isCompact={viewMode === 'compact'}
               />
             ))}
