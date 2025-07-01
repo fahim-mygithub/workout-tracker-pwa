@@ -2,12 +2,14 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { startWorkout } from '../../store/slices/workoutSlice';
-import { WorkoutParser, ExerciseMatcher } from '../../parser';
+import { parserService } from '../../parser/parserService';
+import { ExerciseMatcher } from '../../parser';
 import type { ParseResult, ParseError, Exercise as ParsedExercise } from '../../parser';
 import type { ActiveWorkout, WorkoutExercise, WorkoutSet } from '../../store/slices/workoutSlice';
 import { useAuth } from '../../contexts/AuthContext';
 import { userProfileService } from '../../services/userProfile.service';
 import type { WorkoutData, WorkoutExercise as ServiceWorkoutExercise } from '../../types';
+import './TextWorkoutBuilder.css';
 import {
   Container,
   Typography,
@@ -61,13 +63,13 @@ export const TextWorkoutBuilder: React.FC<TextWorkoutBuilderProps> = ({
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const parser = useRef(new WorkoutParser());
   
   const [workoutText, setWorkoutText] = useState(initialText);
   const [parseResult, setParseResult] = useState<ParseResult | null>(null);
   const [showPreview, setShowPreview] = useState(true);
   const [showHelp, setShowHelp] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isParsing, setIsParsing] = useState(false);
   const [workoutPreview, setWorkoutPreview] = useState<WorkoutPreview | null>(null);
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [workoutName, setWorkoutName] = useState('');
@@ -81,13 +83,22 @@ export const TextWorkoutBuilder: React.FC<TextWorkoutBuilderProps> = ({
     (() => {
       let timeoutId: NodeJS.Timeout;
       
-      return (text: string) => {
+      return async (text: string) => {
         clearTimeout(timeoutId);
-        setIsLoading(true);
         
-        timeoutId = setTimeout(() => {
+        // Get dynamic debounce delay based on text length
+        const delay = parserService.getDebounceDelay(text.length);
+        
+        // Show parsing indicator immediately for better UX
+        if (text.length > 100) {
+          setIsParsing(true);
+        }
+        
+        timeoutId = setTimeout(async () => {
+          setIsLoading(true);
+          
           try {
-            const result = parser.current.parse(text);
+            const result = await parserService.parse(text);
             setParseResult(result);
             
             if (result.success && result.workout) {
@@ -104,14 +115,16 @@ export const TextWorkoutBuilder: React.FC<TextWorkoutBuilderProps> = ({
                 position: 0,
                 line: 1,
                 column: 1,
-                message: 'Unexpected parsing error',
+                message: error instanceof Error ? error.message : 'Unexpected parsing error',
                 severity: 'error'
               }],
               suggestions: []
             });
+          } finally {
+            setIsLoading(false);
+            setIsParsing(false);
           }
-          setIsLoading(false);
-        }, 300);
+        }, delay);
       };
     })(),
     []
@@ -362,21 +375,34 @@ export const TextWorkoutBuilder: React.FC<TextWorkoutBuilderProps> = ({
                   </Flex>
                 </div>
 
-                <Textarea
-                  value={workoutText}
-                  onChange={handleTextChange}
-                  placeholder={`Enter your workout using natural language:
+                <div className="relative">
+                  <Textarea
+                    value={workoutText}
+                    onChange={handleTextChange}
+                    placeholder={`Enter your workout using natural language:
 
 5x10 Bench Press @225lbs
 3x8-12 RDL 185kg
 4x15 Leg Press ss 4x12 Leg Curls
 3xAMRAP Push-ups BW
-12/10/8 Curls 45lbs (drop set)`}
-                  rows={12}
-                  autoResize
-                  className="font-mono text-sm"
-                  helperText="Use natural language to describe your workout"
-                />
+12/10/8 Curls 45lbs (drop set)
+5x Incline DB (2x failure @85lbs) (3x8-10 @75lbs)`}
+                    rows={12}
+                    autoResize
+                    className="font-mono text-sm"
+                    helperText="Use natural language to describe your workout"
+                  />
+                  {isParsing && (
+                    <div className="absolute top-2 right-2 flex items-center gap-2 text-sm text-blue-600">
+                      <div className="flex gap-1">
+                        <span className="animate-pulse">Parsing</span>
+                        <span className="animate-pulse delay-100">.</span>
+                        <span className="animate-pulse delay-200">.</span>
+                        <span className="animate-pulse delay-300">.</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
 
@@ -431,7 +457,33 @@ export const TextWorkoutBuilder: React.FC<TextWorkoutBuilderProps> = ({
           {/* Preview Section */}
           {showPreview && (
             <div className="space-y-4">
-              {workoutPreview && (
+              {isLoading && !workoutPreview ? (
+                <Card>
+                  <CardContent className="p-4">
+                    <Typography variant="h6" className="font-semibold mb-4">
+                      Workout Overview
+                    </Typography>
+                    
+                    {/* Skeleton loader */}
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-3 gap-4">
+                        {[1, 2, 3].map((i) => (
+                          <div key={i} className="text-center">
+                            <div className="skeleton-loader h-8 w-16 mx-auto mb-2"></div>
+                            <div className="skeleton-loader h-4 w-20 mx-auto"></div>
+                          </div>
+                        ))}
+                      </div>
+                      
+                      <div className="space-y-2">
+                        {[1, 2, 3, 4].map((i) => (
+                          <div key={i} className="skeleton-loader h-16 w-full"></div>
+                        ))}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : workoutPreview ? (
                 <Card>
                   <CardContent className="p-4">
                     <Typography variant="h6" className="font-semibold mb-4">
@@ -495,7 +547,7 @@ export const TextWorkoutBuilder: React.FC<TextWorkoutBuilderProps> = ({
                     </div>
                   </CardContent>
                 </Card>
-              )}
+              ) : null}
 
               {/* Action Buttons */}
               {parseResult?.success && (

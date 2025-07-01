@@ -45,9 +45,11 @@ export interface Token {
 // AST Node Types
 export interface Weight {
   value: number;
+  max?: number;          // For weight ranges (e.g., 25-35lbs)
   unit?: 'lbs' | 'kg';
   isBodyweight?: boolean;
   percentage?: boolean;  // For percentage-based training
+  perSide?: boolean;     // For "on each side" notation
 }
 
 export interface Tempo {

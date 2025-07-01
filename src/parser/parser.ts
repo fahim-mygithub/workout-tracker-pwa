@@ -138,6 +138,7 @@ export class WorkoutParser {
   private parseExercise(): Exercise | null {
     // Try different parsing strategies
     const strategies = [
+      () => this.parseComplexNotation(),       // 5x DB Press (2x failure @85) (3x8-10 @75)
       () => this.parseStandardNotation(),      // 5x10 Squat
       () => this.parseWeightFirstNotation(),   // 225 3x5 Squat
       () => this.parseAtNotation(),            // 3x5@225 Squat
@@ -162,6 +163,163 @@ export class WorkoutParser {
     this.skipToNextExercise();
     
     return null;
+  }
+
+  // Complex notation with parenthetical variations: 5x Incline DB (2x failure @85) (3x8-10 @75)
+  private parseComplexNotation(): Exercise | null {
+    // First, try to parse total sets
+    const totalSets = this.consumeNumber();
+    if (totalSets === null) return null;
+    
+    // Check for 'x' without specific reps (indicates complex notation)
+    if (!this.match(TokenType.MULTIPLY)) return null;
+    
+    // If there's a number right after 'x', this is standard notation
+    if (this.check(TokenType.NUMBER)) return null;
+    
+    // Parse exercise name
+    const name = this.parseExerciseName();
+    if (!name) return null;
+    
+    const allSets: ExerciseSet[] = [];
+    let notes: string[] = [];
+    
+    // Look for parenthetical set variations
+    while (this.match(TokenType.LPAREN)) {
+      const setVariation = this.parseSetVariation();
+      if (setVariation) {
+        allSets.push(...setVariation.sets);
+        if (setVariation.note) {
+          notes.push(setVariation.note);
+        }
+      }
+      
+      if (!this.match(TokenType.RPAREN)) {
+        this.addError('Expected closing parenthesis');
+      }
+    }
+    
+    // If no parenthetical variations found, try to parse standard modifiers
+    if (allSets.length === 0) {
+      const modifiers = this.parseModifiers();
+      for (let i = 0; i < totalSets; i++) {
+        allSets.push({ reps: 10, ...modifiers }); // Default to 10 reps
+      }
+    }
+    
+    // Parse any remaining modifiers
+    const additionalModifiers = this.parseModifiers();
+    if (Object.keys(additionalModifiers).length > 0) {
+      // Apply to all sets that don't already have these properties
+      allSets.forEach(set => {
+        Object.keys(additionalModifiers).forEach(key => {
+          if (!(key in set)) {
+            (set as any)[key] = (additionalModifiers as any)[key];
+          }
+        });
+      });
+    }
+    
+    return {
+      name,
+      sets: allSets,
+      notes: notes.length > 0 ? notes : undefined
+    };
+  }
+  
+  // Parse set variation inside parentheses
+  private parseSetVariation(): { sets: ExerciseSet[], note?: string } | null {
+    const sets: ExerciseSet[] = [];
+    let note: string | undefined;
+    
+    // Parse sets x reps pattern
+    const setCount = this.consumeNumber();
+    if (setCount === null) {
+      // Try to parse special instruction
+      const instruction = this.parseSpecialInstruction();
+      if (instruction) {
+        note = instruction;
+      }
+      return { sets: [], note };
+    }
+    
+    if (!this.match(TokenType.MULTIPLY)) {
+      // Just a number, might be weight or reps
+      return null;
+    }
+    
+    // Parse reps (could be range, AMRAP, or number)
+    let reps: RepsValue;
+    if (this.match(TokenType.AMRAP)) {
+      reps = 'AMRAP';
+    } else {
+      const firstRep = this.consumeNumber();
+      if (firstRep === null) {
+        // Check for special keywords like "failure"
+        if (this.check(TokenType.WORD)) {
+          const word = this.advance().value.toLowerCase();
+          if (word === 'failure' || word === 'fail') {
+            reps = 'AMRAP';
+            note = 'to failure';
+          } else {
+            return null;
+          }
+        } else {
+          return null;
+        }
+      } else {
+        // Check for range
+        if (this.match(TokenType.DASH)) {
+          const secondRep = this.consumeNumber();
+          if (secondRep === null) {
+            this.addError('Expected number after dash in rep range');
+            reps = firstRep;
+          } else {
+            reps = { min: firstRep, max: secondRep };
+          }
+        } else {
+          reps = firstRep;
+        }
+      }
+    }
+    
+    // Parse weight and other modifiers within parentheses
+    const modifiers = this.parseModifiers();
+    
+    // Check for special instructions
+    if (this.check(TokenType.WORD)) {
+      const words: string[] = [];
+      while (this.check(TokenType.WORD) && !this.check(TokenType.RPAREN)) {
+        words.push(this.advance().value);
+      }
+      if (words.length > 0) {
+        note = (note ? note + ', ' : '') + words.join(' ');
+      }
+    }
+    
+    // Create sets with parsed information
+    for (let i = 0; i < setCount; i++) {
+      sets.push({ reps, ...modifiers });
+    }
+    
+    return { sets, note };
+  }
+  
+  // Parse special instructions
+  private parseSpecialInstruction(): string | null {
+    const words: string[] = [];
+    
+    while (this.check(TokenType.WORD) && !this.check(TokenType.RPAREN)) {
+      const word = this.advance().value;
+      words.push(word);
+      
+      // Stop if we hit something that looks like a new exercise or set notation
+      if (this.check(TokenType.NUMBER) || this.check(TokenType.SUPERSET)) {
+        break;
+      }
+    }
+    
+    return words.length > 0 ? words.join(' ') : null;
   }
 
   // Standard notation: 5x10 Squat @225 R90
@@ -358,14 +516,37 @@ export class WorkoutParser {
 
   private parseExerciseName(): string | null {
     const words: string[] = [];
+    const stopTokens = [
+      TokenType.AT, TokenType.LPAREN, TokenType.RPAREN, 
+      TokenType.SUPERSET, TokenType.NEWLINE, TokenType.EOF,
+      TokenType.REST
+    ];
 
-    while (!this.isAtEnd() && this.check(TokenType.WORD)) {
-      words.push(this.advance().value);
+    while (!this.isAtEnd() && !stopTokens.includes(this.peek().type)) {
+      if (this.check(TokenType.WORD)) {
+        words.push(this.advance().value);
+      } else if (this.check(TokenType.NUMBER)) {
+        // Stop if we see a number that looks like sets (e.g., "4x" in next exercise)
+        if (this.peekAhead()?.type === TokenType.MULTIPLY) {
+          break;
+        }
+        // Otherwise include the number in exercise name (e.g., "21s")
+        words.push(this.advance().value);
+      } else if (this.check(TokenType.DASH) && words.length > 0) {
+        // Include dashes in exercise names (e.g., "Y-Raises")
+        words.push(this.advance().value);
+      } else {
+        break;
+      }
     }
 
     if (words.length === 0) return null;
 
-    const rawName = words.join(' ');
+    // Clean up the name (remove trailing dashes, etc.)
+    let rawName = words.join(' ').trim();
+    if (rawName.endsWith('-')) {
+      rawName = rawName.slice(0, -1).trim();
+    }
     
     // Try to match with known exercises
     const matchedExercise = ExerciseMatcher.findExercise(rawName);
@@ -393,23 +574,32 @@ export class WorkoutParser {
 
     while (!this.isAtEnd()) {
       if (this.match(TokenType.AT)) {
-        // RPE or weight
-        if (this.match(TokenType.RPE) || (this.peek().type === TokenType.NUMBER && this.peekAhead()?.type !== TokenType.WEIGHT_UNIT)) {
+        // Weight after @ symbol
+        const weight = this.parseWeight();
+        if (weight) {
+          modifiers.weight = weight;
+        } else {
+          // Try RPE if not weight
           const rpe = this.consumeNumber();
-          if (rpe !== null) {
+          if (rpe !== null && rpe >= 1 && rpe <= 10) {
             modifiers.rpe = rpe;
           }
-        } else {
+        }
+      } else if (this.check(TokenType.NUMBER)) {
+        // Check if it's weight (with unit) or standalone
+        const nextToken = this.peekAhead();
+        if (nextToken && (nextToken.type === TokenType.WEIGHT_UNIT || 
+            (nextToken.type === TokenType.WORD && 
+             (nextToken.value.toLowerCase() === 'on' || 
+              nextToken.value.toLowerCase() === 'each' ||
+              nextToken.value.toLowerCase() === 'per')))) {
           const weight = this.parseWeight();
           if (weight) {
             modifiers.weight = weight;
           }
-        }
-      } else if (this.check(TokenType.NUMBER) && this.peekAhead()?.type === TokenType.WEIGHT_UNIT) {
-        // Weight with unit
-        const weight = this.parseWeight();
-        if (weight) {
-          modifiers.weight = weight;
+        } else {
+          // Could be RPE or other number
+          break;
         }
       } else if (this.match(TokenType.REST) || (this.check(TokenType.WORD) && this.peek().value.toLowerCase() === 'r')) {
         // Rest period
@@ -425,6 +615,12 @@ export class WorkoutParser {
         const tempo = this.parseTempo();
         if (tempo) {
           modifiers.tempo = tempo;
+        }
+      } else if (this.match(TokenType.RPE)) {
+        // Explicit RPE notation
+        const rpe = this.consumeNumber();
+        if (rpe !== null) {
+          modifiers.rpe = rpe;
         }
       } else {
         break;
@@ -442,8 +638,15 @@ export class WorkoutParser {
     const value = this.consumeNumber();
     if (value === null) return null;
 
+    // Check for weight range (e.g., 25-35lbs)
+    let maxValue: number | undefined;
+    if (this.match(TokenType.DASH)) {
+      maxValue = this.consumeNumber() || undefined;
+    }
+
     let unit: 'lbs' | 'kg' | undefined;
     let percentage = false;
+    let perSide = false;
 
     if (this.match(TokenType.PERCENT)) {
       percentage = true;
@@ -452,7 +655,35 @@ export class WorkoutParser {
       unit = unitToken.startsWith('k') ? 'kg' : 'lbs';
     }
 
-    return { value, unit, percentage };
+    // Check for "on each side" or "per side" notation
+    if (this.check(TokenType.WORD)) {
+      const nextWords = [];
+      const savedPosition = this.current;
+      
+      // Look ahead for "on each side", "per side", etc.
+      for (let i = 0; i < 3 && this.check(TokenType.WORD); i++) {
+        nextWords.push(this.advance().value.toLowerCase());
+      }
+      
+      const phrase = nextWords.join(' ');
+      if (phrase.includes('each side') || phrase.includes('per side') || 
+          phrase.includes('on each') || phrase.includes('per arm')) {
+        perSide = true;
+      } else {
+        // Reset position if not a weight modifier
+        this.current = savedPosition;
+      }
+    }
+
+    const weight: Weight = { value, unit, percentage };
+    if (maxValue !== undefined) {
+      weight.max = maxValue;
+    }
+    if (perSide) {
+      weight.perSide = true;
+    }
+
+    return weight;
   }
 
   private parseTempo(): Tempo | null {

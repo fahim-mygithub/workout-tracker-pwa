@@ -153,6 +153,17 @@ export class Tokenizer {
       'bw': TokenType.BW,
       'bodyweight': TokenType.BW,
       'rm': TokenType.RM,
+      'failure': TokenType.WORD, // Special instruction
+      'fail': TokenType.WORD,     // Special instruction
+      
+      // Common exercise abbreviations
+      'db': TokenType.WORD,
+      'dbs': TokenType.WORD,
+      'bb': TokenType.WORD,
+      'kb': TokenType.WORD,
+      'ohp': TokenType.WORD,
+      'rdl': TokenType.WORD,
+      'sldl': TokenType.WORD,
       
       // Weight units
       'lbs': TokenType.WEIGHT_UNIT,
