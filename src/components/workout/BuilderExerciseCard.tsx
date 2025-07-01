@@ -100,18 +100,22 @@ export const BuilderExerciseCard: React.FC<BuilderExerciseCardProps> = ({
         </div>
       )}
       
-      <Card className={cn(
-        'transition-all relative',
-        isDragging && 'opacity-50',
-        'hover:shadow-md',
-        // Remove top border and round corners for connected cards
-        isNextInSuperset && 'rounded-t-none border-t-0 -mt-px',
-        isPrevInSuperset && !isNextInSuperset && 'rounded-b-none',
-        // Blue outline for superset cards
-        (isNextInSuperset || isPrevInSuperset) && 'border-2 border-blue-500',
-        // Ensure proper stacking
-        (isNextInSuperset || isPrevInSuperset) && 'relative z-0'
-      )}>
+      <Card 
+        {...listeners}
+        {...attributes}
+        className={cn(
+          'transition-all relative cursor-grab active:cursor-grabbing select-none',
+          isDragging && 'opacity-50',
+          'hover:shadow-md',
+          // Remove top border and round corners for connected cards
+          isNextInSuperset && 'rounded-t-none border-t-0 -mt-px',
+          isPrevInSuperset && !isNextInSuperset && 'rounded-b-none',
+          // Blue outline for superset cards
+          (isNextInSuperset || isPrevInSuperset) && 'border-2 border-blue-500',
+          // Ensure proper stacking
+          (isNextInSuperset || isPrevInSuperset) && 'relative z-0'
+        )}
+      >
         
         {/* Separator line for superset exercises */}
         {isNextInSuperset && (
@@ -121,10 +125,7 @@ export const BuilderExerciseCard: React.FC<BuilderExerciseCardProps> = ({
         <CardHeader className="p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3 flex-1">
-              <div
-                {...listeners}
-                className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600"
-              >
+              <div className="text-gray-400">
                 <GripVertical className="w-5 h-5" />
               </div>
               
@@ -134,7 +135,11 @@ export const BuilderExerciseCard: React.FC<BuilderExerciseCardProps> = ({
                     {index + 1}. {exercise.exerciseName}
                   </Typography>
                   <button
-                    onClick={() => setIsExpanded(!isExpanded)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsExpanded(!isExpanded);
+                    }}
+                    onPointerDown={(e) => e.stopPropagation()}
                     className="p-1 hover:bg-gray-100 rounded"
                   >
                     {isExpanded ? (
@@ -158,13 +163,18 @@ export const BuilderExerciseCard: React.FC<BuilderExerciseCardProps> = ({
                           className="w-16 h-6 text-xs"
                           onBlur={handleRestTimeUpdate}
                           onKeyDown={(e) => e.key === 'Enter' && handleRestTimeUpdate()}
+                          onPointerDown={(e) => e.stopPropagation()}
                           autoFocus
                         />
                         <span className="text-xs">sec</span>
                       </div>
                     ) : (
                       <button
-                        onClick={() => setEditingRest(true)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingRest(true);
+                        }}
+                        onPointerDown={(e) => e.stopPropagation()}
                         className="hover:text-blue-600"
                       >
                         {exercise.restTimeSeconds}s rest
@@ -180,7 +190,11 @@ export const BuilderExerciseCard: React.FC<BuilderExerciseCardProps> = ({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={onToggleSuperset}
+                  onClick={(e: React.MouseEvent) => {
+                    e.stopPropagation();
+                    onToggleSuperset();
+                  }}
+                  onPointerDown={(e: React.PointerEvent) => e.stopPropagation()}
                   className={cn(
                     'text-gray-500 hover:text-blue-600 hover:bg-blue-50',
                     isPrevInSuperset && 'text-blue-600 bg-blue-50'
@@ -198,7 +212,11 @@ export const BuilderExerciseCard: React.FC<BuilderExerciseCardProps> = ({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={onRemove}
+                onClick={(e: React.MouseEvent) => {
+                  e.stopPropagation();
+                  onRemove();
+                }}
+                onPointerDown={(e: React.PointerEvent) => e.stopPropagation()}
                 className="text-red-500 hover:text-red-600 hover:bg-red-50"
               >
                 <Trash2 className="w-4 h-4" />
@@ -208,7 +226,9 @@ export const BuilderExerciseCard: React.FC<BuilderExerciseCardProps> = ({
         </CardHeader>
 
         {isExpanded && (
-          <CardContent className="p-4 pt-0 space-y-3">
+          <CardContent 
+            className="p-4 pt-0 space-y-3"
+            onPointerDown={(e) => e.stopPropagation()}>
             {/* Sets */}
             <div className="space-y-2">
               {exercise.sets.map((set, setIndex) => (

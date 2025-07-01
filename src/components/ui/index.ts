@@ -31,3 +31,5 @@ export type { TextareaProps, TextareaRef } from './Textarea';
 
 export { Autocomplete } from './Autocomplete';
 export type { AutocompleteProps, AutocompleteOption } from './Autocomplete';
+
+export { Tabs, TabsList, TabsTrigger, TabsContent } from './Tabs';

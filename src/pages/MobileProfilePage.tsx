@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Container, Typography, Alert, LoadingSpinner } from '../components/ui';
+import { Container, Typography, Alert, LoadingSpinner, Card } from '../components/ui';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/Tabs';
 import { ProfileInfo, BMICalculator, SavedWorkouts, AppPreferences, ExerciseHistoryView } from '../components/profile';
 import { useAuth } from '../contexts/AuthContext';
 import { userProfileService } from '../services/userProfile.service';
 import { exportService } from '../services/export.service';
 import { exerciseHistoryService } from '../services/exerciseHistory.service';
 import type { UserProfile, WorkoutData } from '../types';
+import { cn } from '../lib/utils';
 
-export const ProfilePage: React.FC = () => {
+export const MobileProfilePage: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -132,7 +134,7 @@ export const ProfilePage: React.FC = () => {
 
   if (loading) {
     return (
-      <Container maxWidth="4xl" padding="lg">
+      <Container maxWidth="full" padding="sm" className="min-h-screen">
         <div className="flex justify-center items-center h-64">
           <LoadingSpinner size="lg" />
         </div>
@@ -142,7 +144,7 @@ export const ProfilePage: React.FC = () => {
 
   if (error) {
     return (
-      <Container maxWidth="4xl" padding="lg">
+      <Container maxWidth="full" padding="sm" className="min-h-screen">
         <Alert variant="error" title="Error">
           {error}
         </Alert>
@@ -155,51 +157,61 @@ export const ProfilePage: React.FC = () => {
   }
 
   return (
-    <Container maxWidth="7xl" padding="lg" className="min-h-screen">
-      <div className="max-w-6xl mx-auto">
-        <Typography variant="h1" className="text-center mb-8 font-bold">
-          Profile & Settings
+    <Container maxWidth="full" padding="sm" className="min-h-screen pb-20">
+      <div className="space-y-4">
+        <Typography variant="h2" className="text-center font-bold">
+          Profile
         </Typography>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Profile Info */}
-          <div className="lg:col-span-1 space-y-6">
+        <Tabs defaultValue="profile" className="w-full">
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="profile" className="text-xs">Profile</TabsTrigger>
+            <TabsTrigger value="health" className="text-xs">Health</TabsTrigger>
+            <TabsTrigger value="workouts" className="text-xs">Workouts</TabsTrigger>
+            <TabsTrigger value="history" className="text-xs">History</TabsTrigger>
+            <TabsTrigger value="settings" className="text-xs">Settings</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="profile" className="space-y-4 mt-4">
             <ProfileInfo profile={profile} onUpdate={handleProfileUpdate} />
+          </TabsContent>
+
+          <TabsContent value="health" className="space-y-4 mt-4">
             <BMICalculator profile={profile} onUpdate={handleProfileUpdate} />
-          </div>
+            
+            <Card padding="md">
+              <Typography variant="h3" className="mb-3">
+                Workout Statistics
+              </Typography>
+              <Alert variant="info" title="Coming Soon">
+                <Typography variant="body2" className="text-sm">
+                  Personal records, progress tracking, and detailed analytics will be available soon!
+                </Typography>
+              </Alert>
+            </Card>
+          </TabsContent>
 
-          {/* Right Column - Workouts and Settings */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Workout Statistics Coming Soon */}
-            <Alert variant="info" title="Workout Statistics">
-              Detailed workout analytics and progress tracking coming soon! This will include:
-              <ul className="mt-2 ml-4 list-disc text-sm">
-                <li>Exercise personal records and progression charts</li>
-                <li>Workout frequency and consistency metrics</li>
-                <li>Volume and intensity tracking</li>
-                <li>Muscle group distribution analysis</li>
-              </ul>
-            </Alert>
-
-            {/* Saved Workouts Section */}
+          <TabsContent value="workouts" className="space-y-4 mt-4">
             <SavedWorkouts
               workouts={workouts}
               onEdit={handleEditWorkout}
               onDelete={handleDeleteWorkout}
               onShare={handleShareWorkout}
             />
+          </TabsContent>
 
-            {/* Exercise History Section */}
+          <TabsContent value="history" className="space-y-4 mt-4">
             <ExerciseHistoryView limit={10} />
+          </TabsContent>
 
-            {/* App Preferences Section */}
+          <TabsContent value="settings" className="space-y-4 mt-4">
             <AppPreferences
               profile={profile}
               onUpdate={handleProfileUpdate}
               onExport={handleExport}
             />
-          </div>
-        </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </Container>
   );

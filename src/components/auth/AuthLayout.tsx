@@ -12,12 +12,12 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
   subtitle 
 }) => {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
+    <div className="flex items-center justify-center min-h-[calc(100vh-6rem)] px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-sm sm:max-w-md space-y-6">
         <div>
-          <div className="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-indigo-100">
+          <div className="mx-auto h-16 w-16 flex items-center justify-center rounded-xl bg-primary-100">
             <svg 
-              className="h-6 w-6 text-indigo-600" 
+              className="h-10 w-10 text-primary-600" 
               fill="none" 
               viewBox="0 0 24 24" 
               stroke="currentColor"
@@ -30,7 +30,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
               />
             </svg>
           </div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+          <h2 className="mt-6 text-center text-2xl sm:text-3xl font-bold text-gray-900">
             {title}
           </h2>
           {subtitle && (

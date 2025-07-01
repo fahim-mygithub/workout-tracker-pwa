@@ -21,12 +21,12 @@ export const AuthButton: React.FC<AuthButtonProps> = ({
 
   const variantClasses = {
     primary: `
-      border-transparent text-white bg-indigo-600 hover:bg-indigo-700 
-      focus:ring-indigo-500 disabled:bg-indigo-400
+      border-transparent text-white bg-primary-600 hover:bg-primary-700 
+      focus:ring-primary-500 disabled:bg-primary-400
     `,
     google: `
       border-gray-300 text-gray-700 bg-white hover:bg-gray-50 
-      focus:ring-indigo-500 disabled:bg-gray-100
+      focus:ring-primary-500 disabled:bg-gray-100
     `
   };
 

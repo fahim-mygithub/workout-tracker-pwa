@@ -6,7 +6,10 @@ import {
   BuildPage, 
   ExercisesPage, 
   ProfilePage,
-  DevPage
+  DevPage,
+  LoginPage,
+  SignUpPage,
+  SharedWorkoutPage
 } from '../pages';
 
 const router = createBrowserRouter([
@@ -37,6 +40,18 @@ const router = createBrowserRouter([
       {
         path: 'dev',
         element: <DevPage />,
+      },
+      {
+        path: 'login',
+        element: <LoginPage />,
+      },
+      {
+        path: 'signup',
+        element: <SignUpPage />,
+      },
+      {
+        path: 'shared/:shareId',
+        element: <SharedWorkoutPage />,
       },
     ],
   },

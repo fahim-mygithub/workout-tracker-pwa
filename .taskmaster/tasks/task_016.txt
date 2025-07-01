@@ -1,16 +1,60 @@
 # Task ID: 16
-# Title: Offline Data Sync
-# Status: pending
+# Title: Profile Page & User Data Persistence
+# Status: done
 # Dependencies: None
 # Priority: high
-# Description: Implement offline-first data synchronization
+# Description: Implement comprehensive profile page with user data persistence and offline sync
 # Details:
-1. Configure offline persistence for Firestore
-2. Implement sync queue for offline changes
-3. Handle conflict resolution
-4. Add sync status indicators
-5. Test various offline scenarios
-6. Optimize for battery efficiency
+1. Create Profile Page UI Components
+   - Personal info section (name, birthday, gender, experience level)
+   - Profile picture upload with Firebase Storage
+   - BMI calculator with height/weight inputs (metric/imperial)
+   - Stats placeholder with "coming soon" message
+
+2. Implement User Data Model & Firebase Integration
+   - Create Firestore user document structure
+   - Implement user profile service with CRUD operations
+   - Set up Firebase Storage for profile pictures
+   - Create offline-first data sync with conflict resolution
+
+3. Build Saved Workouts Management System
+   - Create workouts collection linked to user
+   - Implement save workout from Build screen
+   - Add edit/delete functionality for saved workouts
+   - Create workout categories/tags system
+
+4. Implement Exercise History Tracking
+   - Create exercise_history collection structure
+   - Track weight, reps, and date for each exercise
+   - Link history to user and specific exercises
+   - Build data aggregation for personal records
+
+5. Add Shared Workouts Functionality
+   - Generate shareable workout URLs
+   - Create public workout view for non-authenticated users
+   - Implement "Save to Account" prompt for non-users
+   - Copy shared workouts to user's collection
+
+6. Build App Preferences System
+   - Dark mode toggle implementation
+   - Unit preference (metric/imperial) with conversions
+   - Default rest timer settings
+   - Notification preferences
+
+7. Create Export Functionality
+   - CSV export for workout history and stats
+   - PDF generation with human-readable formatting
+   - Include workout details, exercise history, and progress
+
+8. Implement Comprehensive Testing
+   - Write Puppeteer tests for all UI interactions
+   - Test offline/online sync scenarios
+   - Verify data persistence and retrieval
+   - Test export functionality
 
 # Test Strategy:
-Offline/online transition tests, sync conflict tests, data integrity tests
+- TDD approach with test files written before implementation
+- Puppeteer E2E tests for profile page interactions
+- Unit tests for data models and services
+- Integration tests for Firebase operations
+- Offline/online transition tests for sync functionality

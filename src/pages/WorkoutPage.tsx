@@ -12,6 +12,7 @@ import {
   previousSet,
   completeSet,
   updateWorkoutDuration,
+  type WorkoutSet
 } from '../store/slices/workoutSlice';
 import {
   Container,
@@ -134,7 +135,7 @@ export const WorkoutPage: React.FC = () => {
     }
   };
 
-  const handleSetComplete = (actualValues: Partial<any>) => {
+  const handleSetComplete = (actualValues: Partial<WorkoutSet>) => {
     dispatch(completeSet({
       exerciseIndex: activeWorkout.currentExerciseIndex,
       setIndex: activeWorkout.currentSetIndex,

@@ -1,9 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useDispatch } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import { startWorkout } from '../../store/slices/workoutSlice';
 import { WorkoutParser, ExerciseMatcher } from '../../parser';
 import type { ParseResult, ParseError, Exercise as ParsedExercise } from '../../parser';
 import type { ActiveWorkout, WorkoutExercise, WorkoutSet } from '../../store/slices/workoutSlice';
+import { useAuth } from '../../contexts/AuthContext';
+import { userProfileService } from '../../services/userProfile.service';
+import type { WorkoutData, WorkoutExercise as ServiceWorkoutExercise } from '../../types';
 import {
   Container,
   Typography,
@@ -15,6 +19,7 @@ import {
   Modal,
   Flex,
   Grid,
+  Input,
 } from '../ui';
 import { 
   Play, 
@@ -54,6 +59,8 @@ export const TextWorkoutBuilder: React.FC<TextWorkoutBuilderProps> = ({
   className = '',
 }) => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const parser = useRef(new WorkoutParser());
   
   const [workoutText, setWorkoutText] = useState(initialText);
@@ -62,6 +69,12 @@ export const TextWorkoutBuilder: React.FC<TextWorkoutBuilderProps> = ({
   const [showHelp, setShowHelp] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [workoutPreview, setWorkoutPreview] = useState<WorkoutPreview | null>(null);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [workoutName, setWorkoutName] = useState('');
+  const [workoutDescription, setWorkoutDescription] = useState('');
+  const [workoutTags, setWorkoutTags] = useState('');
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Parse workout text with debouncing
   const parseWorkout = useCallback(
@@ -218,19 +231,83 @@ export const TextWorkoutBuilder: React.FC<TextWorkoutBuilderProps> = ({
     }
   };
 
-  // Save workout text
-  const handleSaveWorkout = () => {
-    if (workoutText.trim()) {
-      const savedWorkouts = JSON.parse(localStorage.getItem('savedWorkouts') || '[]');
-      const newWorkout = {
-        id: Date.now(),
-        name: `Workout ${new Date().toLocaleDateString()}`,
-        text: workoutText,
-        createdAt: new Date().toISOString(),
+  // Convert parsed workout to service format
+  const convertToServiceFormat = (parsedWorkout: any): ServiceWorkoutExercise[] => {
+    const exercises: ServiceWorkoutExercise[] = [];
+    
+    parsedWorkout.groups?.forEach((group: any) => {
+      group.exercises?.forEach((exercise: ParsedExercise) => {
+        const exerciseData: ServiceWorkoutExercise = {
+          exerciseId: exercise.name.toLowerCase().replace(/\s+/g, '-'),
+          exerciseName: exercise.name,
+          sets: exercise.sets.map(set => ({
+            targetReps: typeof set.reps === 'object' ? set.reps.min : (set.reps === 'AMRAP' ? undefined : Number(set.reps)),
+            targetWeight: set.weight?.value,
+            rpe: set.rpe,
+          })),
+          restTime: exercise.sets[0]?.rest || 90,
+          notes: exercise.notes?.join(', '),
+          supersetWith: group.type === 'superset' ? ['next-exercise'] : undefined,
+        };
+        exercises.push(exerciseData);
+      });
+    });
+    
+    return exercises;
+  };
+
+  // Save workout to Firebase
+  const handleSaveWorkout = async () => {
+    if (!user) {
+      alert('Please sign in to save workouts');
+      navigate('/login');
+      return;
+    }
+
+    if (!parseResult?.success || !parseResult.workout) {
+      setSaveError('Please fix parsing errors before saving');
+      return;
+    }
+
+    setShowSaveModal(true);
+  };
+
+  const confirmSaveWorkout = async () => {
+    if (!user || !parseResult?.workout || !workoutName.trim()) return;
+
+    setIsSaving(true);
+    setSaveError(null);
+
+    try {
+      const exercises = convertToServiceFormat(parseResult.workout);
+      const tags = workoutTags.split(',').map(tag => tag.trim()).filter(Boolean);
+      
+      const workoutData: Omit<WorkoutData, 'id' | 'createdAt' | 'updatedAt'> = {
+        userId: user.uid,
+        name: workoutName,
+        description: workoutDescription,
+        exercises,
+        tags,
+        category: 'custom',
+        isPublic: false,
+        performanceCount: 0,
       };
-      savedWorkouts.push(newWorkout);
-      localStorage.setItem('savedWorkouts', JSON.stringify(savedWorkouts));
-      // Show success feedback
+
+      await userProfileService.saveWorkout(workoutData);
+      
+      // Clear form
+      setWorkoutName('');
+      setWorkoutDescription('');
+      setWorkoutTags('');
+      setShowSaveModal(false);
+      
+      alert('Workout saved successfully!');
+      navigate('/profile');
+    } catch (error) {
+      console.error('Error saving workout:', error);
+      setSaveError('Failed to save workout. Please try again.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -495,6 +572,82 @@ export const TextWorkoutBuilder: React.FC<TextWorkoutBuilderProps> = ({
                 <div><strong>tempo 3-1-2</strong> - Tempo: 3s down, 1s pause, 2s up</div>
               </div>
             </div>
+          </div>
+        </Modal>
+
+        {/* Save Workout Modal */}
+        <Modal
+          isOpen={showSaveModal}
+          onClose={() => {
+            setShowSaveModal(false);
+            setSaveError(null);
+          }}
+          title="Save Workout"
+          size="md"
+        >
+          <div className="space-y-4">
+            {saveError && (
+              <Alert variant="error" title="Error">
+                {saveError}
+              </Alert>
+            )}
+            
+            <div>
+              <Typography variant="body2" className="mb-1">
+                Workout Name *
+              </Typography>
+              <Input
+                value={workoutName}
+                onChange={(e) => setWorkoutName(e.target.value)}
+                placeholder="e.g., Upper Body Strength"
+                required
+              />
+            </div>
+
+            <div>
+              <Typography variant="body2" className="mb-1">
+                Description
+              </Typography>
+              <Textarea
+                value={workoutDescription}
+                onChange={(e) => setWorkoutDescription(e.target.value)}
+                placeholder="Brief description of the workout..."
+                rows={3}
+              />
+            </div>
+
+            <div>
+              <Typography variant="body2" className="mb-1">
+                Tags (comma-separated)
+              </Typography>
+              <Input
+                value={workoutTags}
+                onChange={(e) => setWorkoutTags(e.target.value)}
+                placeholder="e.g., strength, upper body, push"
+              />
+            </div>
+
+            <Flex gap="sm" className="mt-6">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowSaveModal(false);
+                  setSaveError(null);
+                }}
+                className="flex-1"
+                disabled={isSaving}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                onClick={confirmSaveWorkout}
+                className="flex-1"
+                disabled={!workoutName.trim() || isSaving}
+              >
+                {isSaving ? 'Saving...' : 'Save Workout'}
+              </Button>
+            </Flex>
           </div>
         </Modal>
       </div>

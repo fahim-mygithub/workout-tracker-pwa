@@ -128,15 +128,13 @@ export const LoginForm: React.FC = () => {
           </div>
         )}
 
-        <div className="flex items-center justify-between">
-          <div className="text-sm">
-            <Link 
-              to="/reset-password" 
-              className="font-medium text-indigo-600 hover:text-indigo-500"
-            >
-              Forgot your password?
-            </Link>
-          </div>
+        <div className="text-right">
+          <Link 
+            to="/reset-password" 
+            className="text-sm font-medium text-primary-600 hover:text-primary-500"
+          >
+            Forgot your password?
+          </Link>
         </div>
 
         <div className="space-y-4">
@@ -152,7 +150,7 @@ export const LoginForm: React.FC = () => {
               <div className="w-full border-t border-gray-300" />
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-gray-50 text-gray-500">Or continue with</span>
+              <span className="px-2 bg-white text-gray-500">Or continue with</span>
             </div>
           </div>
 
@@ -171,7 +169,7 @@ export const LoginForm: React.FC = () => {
             Don't have an account?{' '}
             <Link 
               to="/signup" 
-              className="font-medium text-indigo-600 hover:text-indigo-500"
+              className="font-medium text-primary-600 hover:text-primary-500"
             >
               Sign up
             </Link>

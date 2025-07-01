@@ -5,3 +5,4 @@ export { TextWorkoutBuilder } from './TextWorkoutBuilder';
 export { VisualWorkoutBuilder } from './VisualWorkoutBuilder';
 export { BuilderExerciseCard } from './BuilderExerciseCard';
 export { DraggableExerciseCard } from './DraggableExerciseCard';
+export { ExerciseTracker } from './ExerciseTracker';

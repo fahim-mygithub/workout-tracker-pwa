@@ -52,19 +52,17 @@ export const DraggableExerciseCard: React.FC<DraggableExerciseCardProps> = ({
   return (
     <div ref={setNodeRef}>
       <Card 
+        {...listeners}
+        {...attributes}
         className={cn(
-          'cursor-grab active:cursor-grabbing transition-all hover:shadow-md',
+          'cursor-grab active:cursor-grabbing transition-all hover:shadow-md select-none',
           isDragging && 'opacity-50 shadow-lg',
           'bg-white'
         )}
       >
         <CardContent className="p-3">
           <div className="flex items-center gap-3">
-            <div
-              {...listeners}
-              {...attributes}
-              className="text-gray-400 hover:text-gray-600"
-            >
+            <div className="text-gray-400">
               <GripVertical className="w-4 h-4" />
             </div>
             
@@ -101,7 +99,11 @@ export const DraggableExerciseCard: React.FC<DraggableExerciseCardProps> = ({
             
             {onAddClick && (
               <button
-                onClick={onAddClick}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAddClick();
+                }}
+                onPointerDown={(e) => e.stopPropagation()}
                 className="p-1.5 hover:bg-gray-100 rounded text-gray-600 hover:text-gray-800"
                 title="Add to workout"
               >

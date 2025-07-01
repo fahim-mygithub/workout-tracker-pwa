@@ -167,14 +167,14 @@
     },
     {
       "id": "16",
-      "title": "Offline Data Sync",
-      "description": "Implement offline-first data synchronization",
+      "title": "Profile Page & User Data Persistence",
+      "description": "Implement comprehensive profile page with user data persistence and offline sync",
       "priority": "high",
-      "status": "pending",
+      "status": "in-progress",
       "dependencies": [],
       "subtasks": [],
-      "details": "1. Configure offline persistence for Firestore\n2. Implement sync queue for offline changes\n3. Handle conflict resolution\n4. Add sync status indicators\n5. Test various offline scenarios\n6. Optimize for battery efficiency",
-      "testStrategy": "Offline/online transition tests, sync conflict tests, data integrity tests"
+      "details": "1. Create Profile Page UI Components\n   - Personal info section (name, birthday, gender, experience level)\n   - Profile picture upload with Firebase Storage\n   - BMI calculator with height/weight inputs (metric/imperial)\n   - Stats placeholder with \"coming soon\" message\n\n2. Implement User Data Model & Firebase Integration\n   - Create Firestore user document structure\n   - Implement user profile service with CRUD operations\n   - Set up Firebase Storage for profile pictures\n   - Create offline-first data sync with conflict resolution\n\n3. Build Saved Workouts Management System\n   - Create workouts collection linked to user\n   - Implement save workout from Build screen\n   - Add edit/delete functionality for saved workouts\n   - Create workout categories/tags system\n\n4. Implement Exercise History Tracking\n   - Create exercise_history collection structure\n   - Track weight, reps, and date for each exercise\n   - Link history to user and specific exercises\n   - Build data aggregation for personal records\n\n5. Add Shared Workouts Functionality\n   - Generate shareable workout URLs\n   - Create public workout view for non-authenticated users\n   - Implement \"Save to Account\" prompt for non-users\n   - Copy shared workouts to user's collection\n\n6. Build App Preferences System\n   - Dark mode toggle implementation\n   - Unit preference (metric/imperial) with conversions\n   - Default rest timer settings\n   - Notification preferences\n\n7. Create Export Functionality\n   - CSV export for workout history and stats\n   - PDF generation with human-readable formatting\n   - Include workout details, exercise history, and progress\n\n8. Implement Comprehensive Testing\n   - Write Puppeteer tests for all UI interactions\n   - Test offline/online sync scenarios\n   - Verify data persistence and retrieval\n   - Test export functionality",
+      "testStrategy": "TDD approach with test files written before implementation\nPuppeteer E2E tests for profile page interactions\nUnit tests for data models and services\nIntegration tests for Firebase operations\nOffline/online transition tests for sync functionality"
     },
     {
       "id": "17",
