@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import { 
   DndContext, 
   closestCenter,
@@ -17,12 +18,12 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { useDroppable } from '@dnd-kit/core';
-import { Typography, Button, Input, LoadingSpinner } from '../ui';
+import { Typography, Button, Input, LoadingSpinner, Modal, Alert, Textarea } from '../ui';
 import { ExerciseSearchBar } from '../exercise/ExerciseSearchBar';
 import { ExerciseFilters } from '../exercise/ExerciseFilters';
 import { BuilderExerciseCard } from './BuilderExerciseCard';
 import { DraggableExerciseCard } from './DraggableExerciseCard';
-import { Search, X, Play } from 'lucide-react';
+import { Search, X, Play, Save } from 'lucide-react';
 import type { RootState } from '../../store';
 import type { Exercise } from '../../types/exercise';
 import type { WorkoutExercise } from '../../store/slices/workoutSlice';
@@ -30,6 +31,9 @@ import { searchExercises, updateFilter, clearFilter } from '../../store/slices/e
 import { startWorkout } from '../../store/slices/workoutSlice';
 import { useLoadExercises } from '../../hooks/useLoadExercises';
 import { cn } from '../../lib/utils';
+import { useAuth } from '../../contexts/AuthContext';
+import { userProfileService } from '../../services/userProfile.service';
+import type { WorkoutData, WorkoutExercise as ServiceWorkoutExercise, ExerciseSet } from '../../types';
 
 interface VisualWorkoutBuilderProps {
   onWorkoutStart: () => void;
@@ -37,6 +41,8 @@ interface VisualWorkoutBuilderProps {
 
 export const VisualWorkoutBuilder: React.FC<VisualWorkoutBuilderProps> = ({ onWorkoutStart }) => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const { filteredExercises, filter, isLoading } = useSelector((state: RootState) => state.exercise);
   
   // Load exercises if not already loaded
@@ -50,6 +56,11 @@ export const VisualWorkoutBuilder: React.FC<VisualWorkoutBuilderProps> = ({ onWo
   const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
   const [draggedExercise, setDraggedExercise] = useState<Exercise | null>(null);
   const [supersetGroups, setSupersetGroups] = useState<{ [key: string]: string[] }>({});
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [workoutDescription, setWorkoutDescription] = useState('');
+  const [workoutTags, setWorkoutTags] = useState('');
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Droppable area setup
   const { setNodeRef: setDroppableRef } = useDroppable({
@@ -245,6 +256,133 @@ export const VisualWorkoutBuilder: React.FC<VisualWorkoutBuilderProps> = ({ onWo
     );
   }, [supersetGroups, workoutExercises]);
 
+  // Convert workout exercises to service format
+  const convertToServiceFormat = useCallback((): ServiceWorkoutExercise[] => {
+    return workoutExercises.map(exercise => {
+      let supersetWithExerciseIds: string[] = [];
+      
+      // Find superset group for this exercise
+      Object.entries(supersetGroups).forEach(([groupId, exerciseIds]) => {
+        if (exerciseIds.includes(exercise.id)) {
+          // Get other exercises in the superset and map to their exercise IDs
+          const otherExerciseIds = exerciseIds.filter(id => id !== exercise.id);
+          supersetWithExerciseIds = otherExerciseIds
+            .map(id => {
+              const otherExercise = workoutExercises.find(ex => ex.id === id);
+              return otherExercise ? otherExercise.exerciseId : '';
+            })
+            .filter(id => id !== '');
+        }
+      });
+      
+      const serviceExercise: ServiceWorkoutExercise = {
+        exerciseId: exercise.exerciseId,
+        exerciseName: exercise.exerciseName,
+        sets: exercise.sets.map(set => {
+          const cleanSet: ExerciseSet = {};
+          if (set.reps) cleanSet.targetReps = set.reps;
+          if (set.weight && set.weight > 0) cleanSet.targetWeight = set.weight;
+          if (set.rpe) cleanSet.rpe = set.rpe;
+          return cleanSet;
+        }),
+        restTime: exercise.restTimeSeconds || 90,
+      };
+      
+      // Only add optional fields if they have values
+      if (exercise.notes) {
+        serviceExercise.notes = exercise.notes;
+      }
+      if (supersetWithExerciseIds.length > 0) {
+        serviceExercise.supersetWith = supersetWithExerciseIds;
+      }
+      
+      return serviceExercise;
+    });
+  }, [workoutExercises, supersetGroups]);
+
+  // Handle save workout
+  const handleSaveWorkout = useCallback(async () => {
+    if (!user) {
+      alert('Please sign in to save workouts');
+      navigate('/login');
+      return;
+    }
+
+    if (workoutExercises.length === 0) {
+      setSaveError('Please add exercises to your workout');
+      return;
+    }
+
+    setShowSaveModal(true);
+  }, [user, workoutExercises.length, navigate]);
+
+  const confirmSaveWorkout = useCallback(async () => {
+    if (!user || workoutExercises.length === 0 || !workoutName.trim()) return;
+
+    setIsSaving(true);
+    setSaveError(null);
+
+    try {
+      const exercises = convertToServiceFormat();
+      const tags = workoutTags.split(',').map(tag => tag.trim()).filter(Boolean);
+      
+      // Build workout data object with only defined values
+      const workoutData: any = {
+        userId: user.uid,
+        name: workoutName,
+        exercises: exercises.map(exercise => {
+          // Clean up exercise data
+          const cleanExercise: any = {
+            exerciseId: exercise.exerciseId,
+            exerciseName: exercise.exerciseName,
+            sets: exercise.sets.map(set => {
+              const cleanSet: any = {};
+              if (set.targetReps !== undefined) cleanSet.targetReps = set.targetReps;
+              if (set.targetWeight !== undefined && set.targetWeight !== null && set.targetWeight > 0) {
+                cleanSet.targetWeight = set.targetWeight;
+              }
+              if (set.rpe !== undefined) cleanSet.rpe = set.rpe;
+              return cleanSet;
+            }),
+            restTime: exercise.restTime || 90,
+          };
+          
+          if (exercise.notes) cleanExercise.notes = exercise.notes;
+          if (exercise.supersetWith && exercise.supersetWith.length > 0) {
+            cleanExercise.supersetWith = exercise.supersetWith;
+          }
+          
+          return cleanExercise;
+        }),
+        tags,
+        category: 'custom',
+        isPublic: false,
+        performanceCount: 0,
+      };
+      
+      // Add description only if it exists
+      if (workoutDescription.trim()) {
+        workoutData.description = workoutDescription;
+      }
+
+      await userProfileService.saveWorkout(workoutData);
+      
+      // Clear form
+      setWorkoutName('');
+      setWorkoutDescription('');
+      setWorkoutTags('');
+      setShowSaveModal(false);
+      
+      alert('Workout saved successfully!');
+      navigate('/profile');
+    } catch (error) {
+      console.error('Error saving workout:', error);
+      setSaveError('Failed to save workout. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
+  }, [user, workoutExercises.length, workoutName, workoutDescription, workoutTags, convertToServiceFormat, navigate]);
+
   // Handle workout save/start
   const handleStartWorkout = useCallback(() => {
     if (workoutExercises.length === 0) return;
@@ -279,7 +417,7 @@ export const VisualWorkoutBuilder: React.FC<VisualWorkoutBuilderProps> = ({ onWo
     
     // Navigate to workout page
     onWorkoutStart();
-  }, [workoutExercises, workoutName, dispatch, onWorkoutStart]);
+  }, [workoutExercises, workoutName, dispatch, onWorkoutStart, supersetGroups]);
 
   return (
     <DndContext
@@ -398,6 +536,15 @@ export const VisualWorkoutBuilder: React.FC<VisualWorkoutBuilderProps> = ({ onWo
                   Clear
                 </Button>
                 <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSaveWorkout}
+                  disabled={workoutExercises.length === 0}
+                >
+                  <Save className="w-4 h-4 mr-1" />
+                  Save
+                </Button>
+                <Button
                   variant="primary"
                   size="sm"
                   onClick={handleStartWorkout}
@@ -464,6 +611,82 @@ export const VisualWorkoutBuilder: React.FC<VisualWorkoutBuilderProps> = ({ onWo
           </div>
         )}
       </DragOverlay>
+
+      {/* Save Workout Modal */}
+      <Modal
+        isOpen={showSaveModal}
+        onClose={() => {
+          setShowSaveModal(false);
+          setSaveError(null);
+        }}
+        title="Save Workout"
+        size="md"
+      >
+        <div className="space-y-4">
+          {saveError && (
+            <Alert variant="error" title="Error">
+              {saveError}
+            </Alert>
+          )}
+          
+          <div>
+            <Typography variant="body2" className="mb-1">
+              Workout Name *
+            </Typography>
+            <Input
+              value={workoutName}
+              onChange={(e) => setWorkoutName(e.target.value)}
+              placeholder="e.g., Upper Body Strength"
+              required
+            />
+          </div>
+
+          <div>
+            <Typography variant="body2" className="mb-1">
+              Description
+            </Typography>
+            <Textarea
+              value={workoutDescription}
+              onChange={(e) => setWorkoutDescription(e.target.value)}
+              placeholder="Brief description of the workout..."
+              rows={3}
+            />
+          </div>
+
+          <div>
+            <Typography variant="body2" className="mb-1">
+              Tags (comma-separated)
+            </Typography>
+            <Input
+              value={workoutTags}
+              onChange={(e) => setWorkoutTags(e.target.value)}
+              placeholder="e.g., strength, upper body, push"
+            />
+          </div>
+
+          <div className="flex gap-2 mt-6">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowSaveModal(false);
+                setSaveError(null);
+              }}
+              className="flex-1"
+              disabled={isSaving}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={confirmSaveWorkout}
+              className="flex-1"
+              disabled={!workoutName.trim() || isSaving}
+            >
+              {isSaving ? 'Saving...' : 'Save Workout'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </DndContext>
   );
 };

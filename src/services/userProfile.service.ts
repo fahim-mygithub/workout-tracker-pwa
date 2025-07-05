@@ -156,20 +156,29 @@ class UserProfileService {
   }
 
   async getUserWorkouts(uid: string): Promise<WorkoutData[]> {
-    const q = query(
-      collection(db, this.WORKOUTS_COLLECTION),
-      where('userId', '==', uid),
-      orderBy('updatedAt', 'desc')
-    );
-    
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      createdAt: doc.data().createdAt?.toDate() || new Date(),
-      updatedAt: doc.data().updatedAt?.toDate() || new Date(),
-      lastPerformedAt: doc.data().lastPerformedAt?.toDate()
-    } as WorkoutData));
+    try {
+      // Simplified query without ordering to avoid index requirement
+      const q = query(
+        collection(db, this.WORKOUTS_COLLECTION),
+        where('userId', '==', uid)
+      );
+      
+      const snapshot = await getDocs(q);
+      const workouts = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        createdAt: doc.data().createdAt?.toDate() || new Date(),
+        updatedAt: doc.data().updatedAt?.toDate() || new Date(),
+        lastPerformedAt: doc.data().lastPerformedAt?.toDate()
+      } as WorkoutData));
+      
+      // Sort by updatedAt on the client side
+      return workouts.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+    } catch (error) {
+      console.error('Error getting user workouts:', error);
+      // Return empty array instead of throwing to prevent app crashes
+      return [];
+    }
   }
 
   async updateWorkout(workoutId: string, updates: Partial<WorkoutData>): Promise<void> {
@@ -263,23 +272,33 @@ class UserProfileService {
     exerciseId?: string, 
     limit: number = 50
   ): Promise<ExerciseHistory[]> {
-    let q = query(
-      collection(db, this.EXERCISE_HISTORY_COLLECTION),
-      where('userId', '==', userId)
-    );
-    
-    if (exerciseId) {
-      q = query(q, where('exerciseId', '==', exerciseId));
+    try {
+      // Build query without ordering to avoid index requirement
+      let q = query(
+        collection(db, this.EXERCISE_HISTORY_COLLECTION),
+        where('userId', '==', userId)
+      );
+      
+      if (exerciseId) {
+        q = query(q, where('exerciseId', '==', exerciseId));
+      }
+      
+      const snapshot = await getDocs(q);
+      const history = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        performedAt: doc.data().performedAt?.toDate() || new Date()
+      } as ExerciseHistory));
+      
+      // Sort by performedAt on the client side and apply limit
+      return history
+        .sort((a, b) => b.performedAt.getTime() - a.performedAt.getTime())
+        .slice(0, limit);
+    } catch (error) {
+      console.error('Error getting exercise history:', error);
+      // Return empty array instead of throwing to prevent app crashes
+      return [];
     }
-    
-    q = query(q, orderBy('performedAt', 'desc'), firestoreLimit(limit));
-    
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      performedAt: doc.data().performedAt?.toDate() || new Date()
-    } as ExerciseHistory));
   }
 
   // Offline Support

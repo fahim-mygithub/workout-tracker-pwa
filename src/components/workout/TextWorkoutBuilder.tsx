@@ -313,20 +313,46 @@ export const TextWorkoutBuilder: React.FC<TextWorkoutBuilderProps> = ({
   const convertToServiceFormat = (parsedWorkout: any): ServiceWorkoutExercise[] => {
     const exercises: ServiceWorkoutExercise[] = [];
     
-    parsedWorkout.groups?.forEach((group: any) => {
-      group.exercises?.forEach((exercise: ParsedExercise) => {
+    parsedWorkout.groups?.forEach((group: any, groupIndex: number) => {
+      const exercisesInGroup = group.exercises || [];
+      
+      exercisesInGroup.forEach((exercise: ParsedExercise, exerciseIndex: number) => {
         const exerciseData: ServiceWorkoutExercise = {
           exerciseId: exercise.name.toLowerCase().replace(/\s+/g, '-'),
           exerciseName: exercise.name,
-          sets: exercise.sets.map(set => ({
-            targetReps: typeof set.reps === 'object' ? set.reps.min : (set.reps === 'AMRAP' ? undefined : Number(set.reps)),
-            targetWeight: set.weight?.value,
-            rpe: set.rpe,
-          })),
+          sets: exercise.sets.map(set => {
+            const cleanSet: any = {};
+            if (typeof set.reps === 'object' && set.reps.min) {
+              cleanSet.targetReps = set.reps.min;
+            } else if (set.reps !== 'AMRAP') {
+              cleanSet.targetReps = Number(set.reps);
+            }
+            if (set.weight?.value && set.weight.value > 0) {
+              cleanSet.targetWeight = set.weight.value;
+            }
+            if (set.rpe) {
+              cleanSet.rpe = set.rpe;
+            }
+            return cleanSet;
+          }),
           restTime: exercise.sets[0]?.rest || 90,
-          notes: exercise.notes?.join(', '),
-          supersetWith: group.type === 'superset' ? ['next-exercise'] : undefined,
         };
+        
+        // Add notes if available
+        if (exercise.notes && exercise.notes.length > 0) {
+          exerciseData.notes = exercise.notes.join(', ');
+        }
+        
+        // Handle supersets - link to other exercises in the same group
+        if (group.type === 'superset' && exercisesInGroup.length > 1) {
+          const otherExerciseIds = exercisesInGroup
+            .filter((_, idx) => idx !== exerciseIndex)
+            .map(ex => ex.name.toLowerCase().replace(/\s+/g, '-'));
+          if (otherExerciseIds.length > 0) {
+            exerciseData.supersetWith = otherExerciseIds;
+          }
+        }
+        
         exercises.push(exerciseData);
       });
     });
@@ -360,16 +386,21 @@ export const TextWorkoutBuilder: React.FC<TextWorkoutBuilderProps> = ({
       const exercises = convertToServiceFormat(parseResult.workout);
       const tags = workoutTags.split(',').map(tag => tag.trim()).filter(Boolean);
       
-      const workoutData: Omit<WorkoutData, 'id' | 'createdAt' | 'updatedAt'> = {
+      // Build workout data with only defined values
+      const workoutData: any = {
         userId: user.uid,
         name: workoutName,
-        description: workoutDescription,
         exercises,
         tags,
         category: 'custom',
         isPublic: false,
         performanceCount: 0,
       };
+      
+      // Add description only if it exists
+      if (workoutDescription.trim()) {
+        workoutData.description = workoutDescription;
+      }
 
       await userProfileService.saveWorkout(workoutData);
       

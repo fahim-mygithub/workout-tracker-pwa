@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import type { RootState } from '../store';
 import {
+  startWorkout,
   endWorkout,
   pauseWorkout,
   resumeWorkout,
@@ -12,7 +13,8 @@ import {
   previousSet,
   completeSet,
   updateWorkoutDuration,
-  type WorkoutSet
+  type WorkoutSet,
+  type WorkoutExercise
 } from '../store/slices/workoutSlice';
 import {
   Container,
@@ -28,15 +30,55 @@ import { ExerciseCard } from '../components/exercise';
 import { RestTimer } from '../components/timer';
 import { FailedSetModal, SupersetIndicator, WorkoutCompletion } from '../components/workout';
 import { Clock, Play, Pause, Square, ChevronLeft, ChevronRight, Home, AlertTriangle } from 'lucide-react';
+import type { WorkoutData } from '../types';
 
 export const WorkoutPage: React.FC = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
   const { activeWorkout, restTimer } = useSelector((state: RootState) => state.workout);
   const [showEndWorkoutModal, setShowEndWorkoutModal] = useState(false);
   const [showFailedSetModal, setShowFailedSetModal] = useState(false);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [workoutTimer, setWorkoutTimer] = useState(0);
+
+  // Handle workout from navigation state (e.g., from profile page)
+  useEffect(() => {
+    const workoutData = location.state?.workout as WorkoutData | undefined;
+    
+    if (workoutData && !activeWorkout) {
+      // Convert WorkoutData to WorkoutExercise format for Redux
+      const workoutExercises: WorkoutExercise[] = workoutData.exercises.map((exercise, index) => ({
+        id: `exercise-${index}`,
+        exerciseId: exercise.exerciseId,
+        exerciseName: exercise.exerciseName,
+        sets: exercise.sets.map((set, setIndex) => ({
+          id: `set-${index}-${setIndex}`,
+          reps: set.targetReps,
+          weight: set.targetWeight,
+          time: set.targetTime,
+          distance: set.targetDistance,
+          completed: false,
+          rpe: set.rpe,
+        })),
+        restTimeSeconds: exercise.restBetweenSets,
+        notes: exercise.notes,
+        completed: false,
+        isSuperset: exercise.supersetWith ? true : false,
+        supersetGroup: exercise.supersetWith,
+      }));
+
+      // Start the workout
+      dispatch(startWorkout({
+        id: `workout-${Date.now()}`,
+        name: workoutData.name,
+        description: workoutData.description,
+        exercises: workoutExercises,
+        currentExerciseIndex: 0,
+        currentSetIndex: 0,
+      }));
+    }
+  }, [location.state, activeWorkout, dispatch]);
 
   // Update workout duration timer
   useEffect(() => {
@@ -53,12 +95,12 @@ export const WorkoutPage: React.FC = () => {
     return () => clearInterval(interval);
   }, [activeWorkout?.isActive, activeWorkout?.startTime, dispatch]);
 
-  // Redirect if no active workout
+  // Redirect if no active workout and no workout data in navigation state
   useEffect(() => {
-    if (!activeWorkout) {
+    if (!activeWorkout && !location.state?.workout) {
       navigate('/');
     }
-  }, [activeWorkout, navigate]);
+  }, [activeWorkout, location.state, navigate]);
 
   if (!activeWorkout) {
     return (

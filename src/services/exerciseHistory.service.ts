@@ -53,23 +53,28 @@ class ExerciseHistoryService {
     limitCount: number = 10
   ): Promise<ExerciseHistory[]> {
     try {
+      // Simplified query without ordering to avoid index requirement
       const historyQuery = query(
         collection(db, this.COLLECTION_NAME),
         where('userId', '==', userId),
-        where('exerciseId', '==', exerciseId),
-        orderBy('performedAt', 'desc'),
-        limit(limitCount)
+        where('exerciseId', '==', exerciseId)
       );
 
       const snapshot = await getDocs(historyQuery);
-      return snapshot.docs.map(doc => ({
+      const history = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
-        performedAt: doc.data().performedAt.toDate()
+        performedAt: doc.data().performedAt?.toDate() || new Date()
       } as ExerciseHistory));
+      
+      // Sort and limit on client side
+      return history
+        .sort((a, b) => b.performedAt.getTime() - a.performedAt.getTime())
+        .slice(0, limitCount);
     } catch (error) {
       console.error('Error getting exercise history:', error);
-      throw error;
+      // Return empty array instead of throwing
+      return [];
     }
   }
 
@@ -78,22 +83,27 @@ class ExerciseHistoryService {
    */
   async getUserHistory(userId: string, limitCount: number = 50): Promise<ExerciseHistory[]> {
     try {
+      // Simplified query without ordering to avoid index requirement
       const historyQuery = query(
         collection(db, this.COLLECTION_NAME),
-        where('userId', '==', userId),
-        orderBy('performedAt', 'desc'),
-        limit(limitCount)
+        where('userId', '==', userId)
       );
 
       const snapshot = await getDocs(historyQuery);
-      return snapshot.docs.map(doc => ({
+      const history = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
-        performedAt: doc.data().performedAt.toDate()
+        performedAt: doc.data().performedAt?.toDate() || new Date()
       } as ExerciseHistory));
+      
+      // Sort and limit on client side
+      return history
+        .sort((a, b) => b.performedAt.getTime() - a.performedAt.getTime())
+        .slice(0, limitCount);
     } catch (error) {
       console.error('Error getting user history:', error);
-      throw error;
+      // Return empty array instead of throwing
+      return [];
     }
   }
 
