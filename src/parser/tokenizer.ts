@@ -18,13 +18,24 @@ export class Tokenizer {
     this.line = 1;
     this.column = 1;
 
-    while (this.position < this.input.length) {
+    const maxTokens = 5000;
+    let tokenCount = 0;
+
+    while (this.position < this.input.length && tokenCount < maxTokens) {
       this.skipWhitespace();
       if (this.position >= this.input.length) break;
 
       const token = this.nextToken();
       if (token) {
         this.tokens.push(token);
+        tokenCount++;
+      }
+      
+      // Prevent infinite loops
+      const prevPosition = this.position;
+      if (this.position === prevPosition && token) {
+        // Force advance if we're stuck
+        this.position++;
       }
     }
 

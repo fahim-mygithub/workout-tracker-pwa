@@ -28,42 +28,97 @@ export class WorkoutParser {
     this.errors = [];
     this.suggestions = [];
 
-    // Tokenize input
-    try {
-      this.tokens = Tokenizer.tokenize(input);
-    } catch (error) {
+    // Validate input
+    if (!input || typeof input !== 'string') {
       return {
         success: false,
         errors: [{
           position: 0,
           line: 1,
           column: 1,
-          message: 'Failed to tokenize input',
+          message: 'Invalid input provided',
           severity: 'error'
         }],
         suggestions: []
       };
     }
 
-    // Parse workout
+    // Limit input size to prevent OOM
+    const maxInputLength = 10000;
+    if (input.length > maxInputLength) {
+      return {
+        success: false,
+        errors: [{
+          position: 0,
+          line: 1,
+          column: 1,
+          message: `Input too long (${input.length} characters). Maximum allowed: ${maxInputLength}`,
+          severity: 'error'
+        }],
+        suggestions: []
+      };
+    }
+
+    // Tokenize input
+    try {
+      this.tokens = Tokenizer.tokenize(input);
+      
+      // Limit token count to prevent memory issues
+      const maxTokens = 5000;
+      if (this.tokens.length > maxTokens) {
+        return {
+          success: false,
+          errors: [{
+            position: 0,
+            line: 1,
+            column: 1,
+            message: `Too many tokens (${this.tokens.length}). Maximum allowed: ${maxTokens}`,
+            severity: 'error'
+          }],
+          suggestions: []
+        };
+      }
+    } catch (error) {
+      console.error('Tokenization error:', error);
+      return {
+        success: false,
+        errors: [{
+          position: 0,
+          line: 1,
+          column: 1,
+          message: 'Failed to tokenize input: ' + (error instanceof Error ? error.message : 'Unknown error'),
+          severity: 'error'
+        }],
+        suggestions: []
+      };
+    }
+
+    // Parse workout with timeout protection
+    const startTime = Date.now();
+    const maxParseTime = 2000; // 2 seconds max
+    
     try {
       const workout = this.parseWorkout();
+      
+      // Check if parsing took too long
+      if (Date.now() - startTime > maxParseTime) {
+        this.addError('Parsing took too long. Please simplify your workout notation.');
+      }
       
       return {
         success: this.errors.length === 0,
         workout,
         errors: this.errors,
-        suggestions: this.suggestions,
-        tokens: this.tokens // For debugging
+        suggestions: this.suggestions
       };
     } catch (error) {
+      console.error('Parse error:', error);
       this.addError('Unexpected parsing error: ' + (error instanceof Error ? error.message : 'Unknown error'));
       
       return {
         success: false,
         errors: this.errors,
-        suggestions: this.suggestions,
-        tokens: this.tokens
+        suggestions: this.suggestions
       };
     }
   }
@@ -136,22 +191,28 @@ export class WorkoutParser {
   }
 
   private parseExercise(): Exercise | null {
-    // Try different parsing strategies
+    // Try different parsing strategies - start with simple ones first
     const strategies = [
-      () => this.parseComplexNotation(),       // 5x DB Press (2x failure @85) (3x8-10 @75)
       () => this.parseStandardNotation(),      // 5x10 Squat
       () => this.parseWeightFirstNotation(),   // 225 3x5 Squat
       () => this.parseAtNotation(),            // 3x5@225 Squat
-      () => this.parseCommaNotation(),         // 225x5,5,5 Squat
       () => this.parseSlashNotation(),         // 12/10/8 Curls
+      () => this.parseCommaNotation(),         // 225x5,5,5 Squat
+      () => this.parseComplexNotation(),       // 5x DB Press (2x failure @85) (3x8-10 @75)
     ];
 
     for (const strategy of strategies) {
       const savePoint = this.current;
-      const exercise = strategy();
       
-      if (exercise) {
-        return exercise;
+      try {
+        const exercise = strategy();
+        
+        if (exercise && exercise.name && exercise.sets.length > 0) {
+          return exercise;
+        }
+      } catch (error) {
+        // Strategy failed, continue to next one
+        console.debug('Parse strategy failed:', error);
       }
       
       // Reset to try next strategy
@@ -167,57 +228,78 @@ export class WorkoutParser {
 
   // Complex notation with parenthetical variations: 5x Incline DB (2x failure @85) (3x8-10 @75)
   private parseComplexNotation(): Exercise | null {
+    const startPosition = this.current;
+    
     // First, try to parse total sets
     const totalSets = this.consumeNumber();
-    if (totalSets === null) return null;
+    if (totalSets === null || totalSets <= 0 || totalSets > 100) {
+      this.current = startPosition;
+      return null;
+    }
     
     // Check for 'x' without specific reps (indicates complex notation)
-    if (!this.match(TokenType.MULTIPLY)) return null;
+    if (!this.match(TokenType.MULTIPLY)) {
+      this.current = startPosition;
+      return null;
+    }
     
     // If there's a number right after 'x', this is standard notation
-    if (this.check(TokenType.NUMBER)) return null;
+    if (this.check(TokenType.NUMBER)) {
+      this.current = startPosition;
+      return null;
+    }
     
-    // Parse exercise name
+    // Parse exercise name - must come before parentheses
     const name = this.parseExerciseName();
-    if (!name) return null;
+    if (!name || name.trim() === '') {
+      this.current = startPosition;
+      return null;
+    }
     
     const allSets: ExerciseSet[] = [];
     let notes: string[] = [];
     
+    // Check if we actually have parentheses, otherwise just use default sets
+    if (!this.check(TokenType.LPAREN)) {
+      // No parentheses, just create default sets
+      const modifiers = this.parseModifiers();
+      const safeSetCount = Math.min(totalSets, 100);
+      for (let i = 0; i < safeSetCount; i++) {
+        allSets.push({ reps: 10, ...modifiers });
+      }
+      return {
+        name,
+        sets: allSets,
+        notes: notes.length > 0 ? notes : undefined
+      };
+    }
+    
     // Look for parenthetical set variations
-    while (this.match(TokenType.LPAREN)) {
+    let parenCount = 0;
+    const maxParens = 5;
+    
+    while (this.check(TokenType.LPAREN) && parenCount < maxParens) {
+      if (!this.match(TokenType.LPAREN)) break;
+      parenCount++;
+      
       const setVariation = this.parseSetVariation();
-      if (setVariation) {
+      if (setVariation && setVariation.sets.length > 0) {
         allSets.push(...setVariation.sets);
         if (setVariation.note) {
           notes.push(setVariation.note);
         }
       }
       
-      if (!this.match(TokenType.RPAREN)) {
-        this.addError('Expected closing parenthesis');
-      }
+      // Consume closing parenthesis if present
+      this.match(TokenType.RPAREN);
     }
     
-    // If no parenthetical variations found, try to parse standard modifiers
+    // If we didn't parse any sets, create defaults
     if (allSets.length === 0) {
-      const modifiers = this.parseModifiers();
-      for (let i = 0; i < totalSets; i++) {
-        allSets.push({ reps: 10, ...modifiers }); // Default to 10 reps
+      const safeSetCount = Math.min(totalSets, 100);
+      for (let i = 0; i < safeSetCount; i++) {
+        allSets.push({ reps: 10 });
       }
-    }
-    
-    // Parse any remaining modifiers
-    const additionalModifiers = this.parseModifiers();
-    if (Object.keys(additionalModifiers).length > 0) {
-      // Apply to all sets that don't already have these properties
-      allSets.forEach(set => {
-        Object.keys(additionalModifiers).forEach(key => {
-          if (!(key in set)) {
-            (set as any)[key] = (additionalModifiers as any)[key];
-          }
-        });
-      });
     }
     
     return {
@@ -232,10 +314,14 @@ export class WorkoutParser {
     const sets: ExerciseSet[] = [];
     let note: string | undefined;
     
+    // Save position in case we need to backtrack
+    const startPos = this.current;
+    
     // Parse sets x reps pattern
     const setCount = this.consumeNumber();
-    if (setCount === null) {
-      // Try to parse special instruction
+    if (setCount === null || setCount > 100) {
+      // Reset and try to parse special instruction
+      this.current = startPos;
       const instruction = this.parseSpecialInstruction();
       if (instruction) {
         note = instruction;
@@ -244,74 +330,96 @@ export class WorkoutParser {
     }
     
     if (!this.match(TokenType.MULTIPLY)) {
-      // Just a number, might be weight or reps
-      return null;
+      // Reset if no multiply sign
+      this.current = startPos;
+      return { sets: [], note: undefined };
     }
     
     // Parse reps (could be range, AMRAP, or number)
-    let reps: RepsValue;
+    let reps: RepsValue = 10; // Default
+    
     if (this.match(TokenType.AMRAP)) {
       reps = 'AMRAP';
-    } else {
+    } else if (this.check(TokenType.NUMBER)) {
       const firstRep = this.consumeNumber();
-      if (firstRep === null) {
-        // Check for special keywords like "failure"
-        if (this.check(TokenType.WORD)) {
-          const word = this.advance().value.toLowerCase();
-          if (word === 'failure' || word === 'fail') {
-            reps = 'AMRAP';
-            note = 'to failure';
-          } else {
-            return null;
-          }
-        } else {
-          return null;
-        }
-      } else {
+      if (firstRep !== null) {
         // Check for range
-        if (this.match(TokenType.DASH)) {
+        if (this.match(TokenType.DASH) && this.check(TokenType.NUMBER)) {
           const secondRep = this.consumeNumber();
-          if (secondRep === null) {
-            this.addError('Expected number after dash in rep range');
-            reps = firstRep;
-          } else {
+          if (secondRep !== null && secondRep > firstRep) {
             reps = { min: firstRep, max: secondRep };
+          } else {
+            reps = firstRep;
           }
         } else {
           reps = firstRep;
         }
       }
-    }
-    
-    // Parse weight and other modifiers within parentheses
-    const modifiers = this.parseModifiers();
-    
-    // Check for special instructions
-    if (this.check(TokenType.WORD)) {
-      const words: string[] = [];
-      while (this.check(TokenType.WORD) && !this.check(TokenType.RPAREN)) {
-        words.push(this.advance().value);
-      }
-      if (words.length > 0) {
-        note = (note ? note + ', ' : '') + words.join(' ');
+    } else if (this.check(TokenType.WORD)) {
+      // Check for "failure" keyword
+      const savedPos = this.current;
+      const word = this.advance().value.toLowerCase();
+      if (word === 'failure' || word === 'fail') {
+        reps = 'AMRAP';
+        note = 'to failure';
+      } else {
+        // Reset if not a recognized keyword
+        this.current = savedPos;
       }
     }
+    
+    // Parse modifiers but limit iterations
+    const modifiers = this.parseModifiersLimited(10);
     
     // Create sets with parsed information
-    for (let i = 0; i < setCount; i++) {
+    const safeCount = Math.min(Math.max(0, setCount), 20);
+    for (let i = 0; i < safeCount; i++) {
       sets.push({ reps, ...modifiers });
     }
     
     return { sets, note };
   }
   
+  // Limited version of parseModifiers for use within parentheses
+  private parseModifiersLimited(maxIterations: number): Partial<ExerciseSet> {
+    const modifiers: Partial<ExerciseSet> = {};
+    let iterations = 0;
+    
+    while (!this.isAtEnd() && iterations < maxIterations && this.peek().type !== TokenType.RPAREN) {
+      iterations++;
+      
+      if (this.match(TokenType.AT)) {
+        // Try to parse weight after @
+        const weight = this.parseWeight();
+        if (weight) {
+          modifiers.weight = weight;
+        }
+      } else if (this.match(TokenType.WORD)) {
+        // Consume but don't process random words
+        continue;
+      } else {
+        break;
+      }
+    }
+    
+    return modifiers;
+  }
+  
   // Parse special instructions
   private parseSpecialInstruction(): string | null {
     const words: string[] = [];
+    let wordCount = 0;
+    const maxWords = 20;
     
-    while (this.check(TokenType.WORD) && !this.check(TokenType.RPAREN)) {
+    while (this.check(TokenType.WORD) && !this.check(TokenType.RPAREN) && wordCount < maxWords) {
+      // Check if we're at the closing parenthesis
+      if (this.peek().type === TokenType.RPAREN) {
+        break;
+      }
+      
       const word = this.advance().value;
       words.push(word);
+      wordCount++;
       
       // Stop if we hit something that looks like a new exercise or set notation
       if (this.check(TokenType.NUMBER) || this.check(TokenType.SUPERSET)) {
@@ -336,10 +444,15 @@ export class WorkoutParser {
     const modifiers = this.parseModifiers();
 
     // Distribute modifiers across all sets
-    const exerciseSets = Array(sets.setCount).fill(null).map(() => ({
-      reps: sets.reps,
-      ...modifiers
-    }));
+    const setCount = Math.min(Math.max(1, Math.floor(sets.setCount)), 100); // Ensure valid integer
+    
+    const exerciseSets: ExerciseSet[] = [];
+    for (let i = 0; i < setCount; i++) {
+      exerciseSets.push({
+        reps: sets.reps,
+        ...modifiers
+      });
+    }
 
     return {
       name,
@@ -362,11 +475,16 @@ export class WorkoutParser {
 
     const modifiers = this.parseModifiers();
 
-    const exerciseSets = Array(sets.setCount).fill(null).map(() => ({
-      reps: sets.reps,
-      weight,
-      ...modifiers
-    }));
+    const setCount = Math.min(Math.max(1, Math.floor(sets.setCount)), 100); // Ensure valid integer
+    
+    const exerciseSets: ExerciseSet[] = [];
+    for (let i = 0; i < setCount; i++) {
+      exerciseSets.push({
+        reps: sets.reps,
+        weight,
+        ...modifiers
+      });
+    }
 
     return {
       name,
@@ -389,11 +507,16 @@ export class WorkoutParser {
 
     const modifiers = this.parseModifiers();
 
-    const exerciseSets = Array(sets.setCount).fill(null).map(() => ({
-      reps: sets.reps,
-      weight,
-      ...modifiers
-    }));
+    const setCount = Math.min(Math.max(1, Math.floor(sets.setCount)), 100); // Ensure valid integer
+    
+    const exerciseSets: ExerciseSet[] = [];
+    for (let i = 0; i < setCount; i++) {
+      exerciseSets.push({
+        reps: sets.reps,
+        weight,
+        ...modifiers
+      });
+    }
 
     return {
       name,
@@ -486,7 +609,7 @@ export class WorkoutParser {
 
   private parseSetsReps(): { setCount: number; reps: RepsValue } | null {
     const setCount = this.consumeNumber();
-    if (setCount === null) return null;
+    if (setCount === null || setCount <= 0 || setCount > 100) return null;
 
     if (!this.match(TokenType.MULTIPLY)) return null;
 
@@ -521,10 +644,14 @@ export class WorkoutParser {
       TokenType.SUPERSET, TokenType.NEWLINE, TokenType.EOF,
       TokenType.REST
     ];
+    
+    let wordCount = 0;
+    const maxWords = 10; // Limit exercise name length
 
-    while (!this.isAtEnd() && !stopTokens.includes(this.peek().type)) {
+    while (!this.isAtEnd() && !stopTokens.includes(this.peek().type) && wordCount < maxWords) {
       if (this.check(TokenType.WORD)) {
         words.push(this.advance().value);
+        wordCount++;
       } else if (this.check(TokenType.NUMBER)) {
         // Stop if we see a number that looks like sets (e.g., "4x" in next exercise)
         if (this.peekAhead()?.type === TokenType.MULTIPLY) {
@@ -532,7 +659,8 @@ export class WorkoutParser {
         }
         // Otherwise include the number in exercise name (e.g., "21s")
         words.push(this.advance().value);
-      } else if (this.check(TokenType.DASH) && words.length > 0) {
+        wordCount++;
+      } else if (this.check(TokenType.DASH) && words.length > 0 && wordCount < maxWords - 1) {
         // Include dashes in exercise names (e.g., "Y-Raises")
         words.push(this.advance().value);
       } else {
@@ -546,6 +674,11 @@ export class WorkoutParser {
     let rawName = words.join(' ').trim();
     if (rawName.endsWith('-')) {
       rawName = rawName.slice(0, -1).trim();
+    }
+    
+    // Limit final name length
+    if (rawName.length > 100) {
+      rawName = rawName.substring(0, 100);
     }
     
     // Try to match with known exercises
@@ -571,8 +704,11 @@ export class WorkoutParser {
 
   private parseModifiers(): Partial<ExerciseSet> {
     const modifiers: Partial<ExerciseSet> = {};
+    let iterationCount = 0;
+    const maxIterations = 50;
 
-    while (!this.isAtEnd()) {
+    while (!this.isAtEnd() && iterationCount < maxIterations) {
+      iterationCount++;
       if (this.match(TokenType.AT)) {
         // Weight after @ symbol
         const weight = this.parseWeight();
@@ -754,7 +890,14 @@ export class WorkoutParser {
   private consumeNumber(): number | null {
     if (!this.check(TokenType.NUMBER)) return null;
     const token = this.advance();
-    return parseFloat(token.value);
+    const value = parseFloat(token.value);
+    
+    // Validate the number
+    if (isNaN(value) || !isFinite(value)) {
+      return null;
+    }
+    
+    return value;
   }
 
   private peekExercise(): boolean {
@@ -776,11 +919,20 @@ export class WorkoutParser {
   }
 
   private skipToNextExercise(): void {
+    let safetyCounter = 0;
+    const maxIterations = 1000;
+    
     while (!this.isAtEnd() && 
            !this.check(TokenType.NEWLINE) && 
            !this.check(TokenType.PLUS) && 
-           !this.check(TokenType.SUPERSET)) {
+           !this.check(TokenType.SUPERSET) &&
+           safetyCounter < maxIterations) {
       this.advance();
+      safetyCounter++;
+    }
+    
+    if (safetyCounter >= maxIterations) {
+      console.error('Infinite loop detected in skipToNextExercise');
     }
   }
 

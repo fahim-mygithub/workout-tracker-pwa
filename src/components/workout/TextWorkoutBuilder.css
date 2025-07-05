@@ -41,3 +41,29 @@
   animation: shimmer 1.5s infinite;
   border-radius: 0.25rem;
 }
+
+/* Responsive layout fixes */
+@media (max-width: 1024px) {
+  /* Ensure proper spacing on smaller screens */
+  .grid.lg\:grid-cols-2 {
+    gap: 1.5rem;
+  }
+  
+  /* Prevent button overlap */
+  .flex.gap-2 button {
+    min-width: fit-content;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Stack cards properly on mobile */
+  .grid {
+    grid-template-columns: 1fr !important;
+  }
+  
+  /* Adjust card padding on mobile */
+  .MuiCard-root {
+    margin-bottom: 1rem;
+  }
+}

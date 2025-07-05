@@ -4,11 +4,12 @@ import { useNavigate } from 'react-router-dom';
 import { startWorkout } from '../../store/slices/workoutSlice';
 import { parserService } from '../../parser/parserService';
 import { ExerciseMatcher } from '../../parser';
-import type { ParseResult, ParseError, Exercise as ParsedExercise } from '../../parser';
+import type { ParseResult, ParseError, Exercise as ParsedExercise, Workout } from '../../parser';
 import type { ActiveWorkout, WorkoutExercise, WorkoutSet } from '../../store/slices/workoutSlice';
 import { useAuth } from '../../contexts/AuthContext';
 import { userProfileService } from '../../services/userProfile.service';
 import type { WorkoutData, WorkoutExercise as ServiceWorkoutExercise } from '../../types';
+import { EditableWorkoutPreview } from './EditableWorkoutPreview';
 import './TextWorkoutBuilder.css';
 import {
   Container,
@@ -77,6 +78,9 @@ export const TextWorkoutBuilder: React.FC<TextWorkoutBuilderProps> = ({
   const [workoutTags, setWorkoutTags] = useState('');
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [editedWorkout, setEditedWorkout] = useState<Workout | null>(null);
+  const [isEditingPreview, setIsEditingPreview] = useState(false);
+  const [mobileTab, setMobileTab] = useState<'text' | 'preview'>('text');
 
   // Parse workout text with debouncing
   const parseWorkout = useCallback(
@@ -98,24 +102,39 @@ export const TextWorkoutBuilder: React.FC<TextWorkoutBuilderProps> = ({
           setIsLoading(true);
           
           try {
+            console.log('Parsing text:', text); // Debug log
             const result = await parserService.parse(text);
             setParseResult(result);
             
             if (result.success && result.workout) {
               const preview = generateWorkoutPreview(result.workout);
               setWorkoutPreview(preview);
+              setEditedWorkout(result.workout);
             } else {
               setWorkoutPreview(null);
+              setEditedWorkout(null);
             }
           } catch (error) {
             console.error('Parsing error:', error);
+            console.error('Text that caused error:', text); // Debug log
+            
+            // Check for specific errors
+            let errorMessage = 'Unexpected parsing error';
+            if (error instanceof Error) {
+              if (error.message.includes('Invalid array length')) {
+                errorMessage = 'Invalid input format. Please check your workout notation.';
+              } else {
+                errorMessage = error.message;
+              }
+            }
+            
             setParseResult({
               success: false,
               errors: [{
                 position: 0,
                 line: 1,
                 column: 1,
-                message: error instanceof Error ? error.message : 'Unexpected parsing error',
+                message: errorMessage,
                 severity: 'error'
               }],
               suggestions: []
@@ -151,13 +170,35 @@ export const TextWorkoutBuilder: React.FC<TextWorkoutBuilderProps> = ({
           estimatedTime += setCount * 90; // Default rest
         }
 
-        // Format sets display
-        const repsDisplay = exercise.sets?.map((set: any) => {
-          if (typeof set.reps === 'object' && set.reps.min && set.reps.max) {
-            return `${set.reps.min}-${set.reps.max}`;
+        // Format sets display - show unique rep schemes
+        const repsDisplay = (() => {
+          if (!exercise.sets || exercise.sets.length === 0) return '?';
+          
+          // Check if all sets have the same reps
+          const firstReps = exercise.sets[0].reps;
+          const allSame = exercise.sets.every((set: any) => {
+            if (typeof set.reps === 'object' && typeof firstReps === 'object') {
+              return set.reps.min === firstReps.min && set.reps.max === firstReps.max;
+            }
+            return set.reps === firstReps;
+          });
+          
+          if (allSame) {
+            // Show as "5x8-10" format
+            if (typeof firstReps === 'object' && firstReps.min && firstReps.max) {
+              return `${firstReps.min}-${firstReps.max}`;
+            }
+            return firstReps?.toString() || '?';
+          } else {
+            // Show individual reps for each set
+            return exercise.sets.map((set: any) => {
+              if (typeof set.reps === 'object' && set.reps.min && set.reps.max) {
+                return `${set.reps.min}-${set.reps.max}`;
+              }
+              return set.reps?.toString() || '?';
+            }).join(', ');
           }
-          return set.reps?.toString() || '?';
-        }).join(', ') || '?';
+        })();
 
         const weightDisplay = exercise.sets?.[0]?.weight 
           ? `${exercise.sets[0].weight.value}${exercise.sets[0].weight.unit || 'lbs'}`
@@ -181,21 +222,37 @@ export const TextWorkoutBuilder: React.FC<TextWorkoutBuilderProps> = ({
   };
 
   // Convert parsed workout to Redux format
-  const convertToWorkoutState = (parsedWorkout: any): ActiveWorkout => {
+  const convertToWorkoutState = (parsedWorkout: Workout): ActiveWorkout => {
     const exercises: WorkoutExercise[] = [];
     let exerciseCounter = 0;
+    let supersetCounter = 0;
 
-    parsedWorkout.groups?.forEach((group: any) => {
-      group.exercises?.forEach((exercise: ParsedExercise) => {
+    parsedWorkout.groups?.forEach((group) => {
+      const supersetGroup = group.type === 'superset' ? `superset-${++supersetCounter}` : undefined;
+      
+      group.exercises?.forEach((exercise) => {
         exerciseCounter++;
         
-        const sets: WorkoutSet[] = exercise.sets.map((set, index) => ({
-          id: `set-${exerciseCounter}-${index + 1}`,
-          reps: typeof set.reps === 'object' ? set.reps.min : (set.reps === 'AMRAP' ? undefined : Number(set.reps)),
-          weight: set.weight?.value,
-          completed: false,
-          rpe: set.rpe,
-        }));
+        const sets: WorkoutSet[] = exercise.sets.map((set, index) => {
+          let reps: number | undefined;
+          
+          if (typeof set.reps === 'object' && 'min' in set.reps) {
+            // For ranges, use the minimum as target
+            reps = set.reps.min;
+          } else if (set.reps === 'AMRAP') {
+            reps = undefined; // AMRAP sets don't have a target
+          } else {
+            reps = Number(set.reps);
+          }
+          
+          return {
+            id: `set-${exerciseCounter}-${index + 1}`,
+            reps,
+            weight: set.weight?.value,
+            completed: false,
+            rpe: set.rpe,
+          };
+        });
 
         exercises.push({
           id: `exercise-${exerciseCounter}`,
@@ -206,7 +263,7 @@ export const TextWorkoutBuilder: React.FC<TextWorkoutBuilderProps> = ({
           notes: exercise.notes?.join(', '),
           completed: false,
           isSuperset: group.type === 'superset',
-          supersetGroup: group.type === 'superset' ? `superset-${exerciseCounter}` : undefined,
+          supersetGroup,
         });
       });
     });
@@ -237,11 +294,19 @@ export const TextWorkoutBuilder: React.FC<TextWorkoutBuilderProps> = ({
 
   // Start workout
   const handleStartWorkout = () => {
-    if (parseResult?.success && parseResult.workout) {
-      const workoutData = convertToWorkoutState(parseResult.workout);
+    const workoutToStart = editedWorkout || parseResult?.workout;
+    if (workoutToStart) {
+      const workoutData = convertToWorkoutState(workoutToStart);
       dispatch(startWorkout(workoutData));
       onWorkoutStart?.(workoutData);
     }
+  };
+  
+  // Handle workout update from preview editor
+  const handleWorkoutUpdate = (updatedWorkout: Workout) => {
+    setEditedWorkout(updatedWorkout);
+    const preview = generateWorkoutPreview(updatedWorkout);
+    setWorkoutPreview(preview);
   };
 
   // Convert parsed workout to service format
@@ -335,7 +400,7 @@ export const TextWorkoutBuilder: React.FC<TextWorkoutBuilderProps> = ({
   const hasWarnings = parseResult?.errors?.some(error => error.severity === 'warning');
 
   return (
-    <Container maxWidth="xl" className={className}>
+    <Container maxWidth="7xl" className={className}>
       <div className="space-y-6">
         {/* Header */}
         <div className="text-center">
@@ -347,20 +412,41 @@ export const TextWorkoutBuilder: React.FC<TextWorkoutBuilderProps> = ({
           </Typography>
         </div>
 
-        <Grid cols={1} lg={2} gap="lg">
+        {/* Mobile Tabs - Only show on small screens */}
+        <div className="flex md:hidden mb-4 bg-gray-100 p-1 rounded-lg">
+          <Button
+            variant={mobileTab === 'text' ? 'primary' : 'ghost'}
+            size="sm"
+            onClick={() => setMobileTab('text')}
+            className="flex-1"
+          >
+            Workout Text
+          </Button>
+          <Button
+            variant={mobileTab === 'preview' ? 'primary' : 'ghost'}
+            size="sm"
+            onClick={() => setMobileTab('preview')}
+            className="flex-1"
+          >
+            Preview
+          </Button>
+        </div>
+
+        <Grid cols={1} lgCols={2} gap="lg" className="w-full">
           {/* Text Input Section */}
-          <div className="space-y-4">
+          <div className={`space-y-4 ${mobileTab === 'text' ? 'block' : 'hidden md:block'}`}>
             <Card>
               <CardContent className="p-4">
                 <div className="flex justify-between items-center mb-4">
                   <Typography variant="h6" className="font-semibold">
                     Workout Text
                   </Typography>
-                  <Flex gap="sm">
+                  <Flex gap="sm" wrap className="shrink-0">
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => setShowHelp(true)}
+                      className="whitespace-nowrap"
                     >
                       <HelpCircle className="w-4 h-4 mr-1" />
                       Help
@@ -369,6 +455,7 @@ export const TextWorkoutBuilder: React.FC<TextWorkoutBuilderProps> = ({
                       variant="ghost"
                       size="sm"
                       onClick={() => setShowPreview(!showPreview)}
+                      className="min-w-[40px]"
                     >
                       {showPreview ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </Button>
@@ -396,9 +483,9 @@ export const TextWorkoutBuilder: React.FC<TextWorkoutBuilderProps> = ({
                     <div className="absolute top-2 right-2 flex items-center gap-2 text-sm text-blue-600">
                       <div className="flex gap-1">
                         <span className="animate-pulse">Parsing</span>
-                        <span className="animate-pulse delay-100">.</span>
-                        <span className="animate-pulse delay-200">.</span>
-                        <span className="animate-pulse delay-300">.</span>
+                        <span className="animate-pulse" style={{ animationDelay: '0.2s' }}>.</span>
+                        <span className="animate-pulse" style={{ animationDelay: '0.4s' }}>.</span>
+                        <span className="animate-pulse" style={{ animationDelay: '0.6s' }}>.</span>
                       </div>
                     </div>
                   )}
@@ -408,15 +495,15 @@ export const TextWorkoutBuilder: React.FC<TextWorkoutBuilderProps> = ({
 
             {/* Parse Status */}
             {parseResult && (
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2 mb-3">
+              <Card className="md:block">
+                <CardContent className="p-3 md:p-4">
+                  <div className="flex items-center gap-2 mb-2 md:mb-3">
                     {parseResult.success ? (
-                      <CheckCircle className="w-5 h-5 text-green-600" />
+                      <CheckCircle className="w-4 h-4 md:w-5 md:h-5 text-green-600" />
                     ) : (
-                      <AlertTriangle className="w-5 h-5 text-red-600" />
+                      <AlertTriangle className="w-4 h-4 md:w-5 md:h-5 text-red-600" />
                     )}
-                    <Typography variant="h6" className="font-semibold">
+                    <Typography variant="h6" className="font-semibold text-sm md:text-base">
                       Parse Status
                     </Typography>
                   </div>
@@ -440,13 +527,38 @@ export const TextWorkoutBuilder: React.FC<TextWorkoutBuilderProps> = ({
                   {parseResult.suggestions.length > 0 && (
                     <div className="mt-4">
                       <Typography variant="body2" className="font-medium mb-2">
-                        Suggestions:
+                        Exercise Suggestions:
                       </Typography>
-                      {parseResult.suggestions.map((suggestion, index) => (
-                        <div key={index} className="text-sm text-blue-600">
-                          Did you mean "{suggestion.suggestion}" instead of "{suggestion.original}"?
-                        </div>
-                      ))}
+                      <div className="space-y-2">
+                        {parseResult.suggestions.map((suggestion, index) => (
+                          <div key={index} className="p-2 bg-blue-50 rounded-md border border-blue-200">
+                            <div className="flex items-center gap-2">
+                              <AlertTriangle className="w-4 h-4 text-blue-600" />
+                              <Typography variant="body2" className="text-sm">
+                                Unrecognized exercise: <strong>{suggestion.original}</strong>
+                              </Typography>
+                            </div>
+                            <div className="mt-1 ml-6">
+                              <Typography variant="body2" className="text-sm text-gray-600">
+                                Did you mean: 
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="ml-1 text-blue-600 hover:text-blue-800 p-0 h-auto"
+                                  onClick={() => {
+                                    const newText = workoutText.replace(suggestion.original, suggestion.suggestion);
+                                    setWorkoutText(newText);
+                                    parseWorkout(newText);
+                                  }}
+                                >
+                                  {suggestion.suggestion}
+                                </Button>
+                                ?
+                              </Typography>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </CardContent>
@@ -456,102 +568,61 @@ export const TextWorkoutBuilder: React.FC<TextWorkoutBuilderProps> = ({
 
           {/* Preview Section */}
           {showPreview && (
-            <div className="space-y-4">
-              {isLoading && !workoutPreview ? (
-                <Card>
-                  <CardContent className="p-4">
-                    <Typography variant="h6" className="font-semibold mb-4">
-                      Workout Overview
-                    </Typography>
-                    
-                    {/* Skeleton loader */}
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-3 gap-4">
-                        {[1, 2, 3].map((i) => (
-                          <div key={i} className="text-center">
-                            <div className="skeleton-loader h-8 w-16 mx-auto mb-2"></div>
-                            <div className="skeleton-loader h-4 w-20 mx-auto"></div>
-                          </div>
-                        ))}
-                      </div>
-                      
-                      <div className="space-y-2">
-                        {[1, 2, 3, 4].map((i) => (
-                          <div key={i} className="skeleton-loader h-16 w-full"></div>
-                        ))}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ) : workoutPreview ? (
-                <Card>
+            <div className={`space-y-4 ${mobileTab === 'preview' ? 'block' : 'hidden md:block'}`}>
+              {/* Workout Stats */}
+              {workoutPreview && (
+                <Card className="md:block">
                   <CardContent className="p-4">
                     <Typography variant="h6" className="font-semibold mb-4">
                       Workout Overview
                     </Typography>
 
-                    <div className="grid grid-cols-3 gap-4 mb-4">
+                    <div className="grid grid-cols-3 gap-2 md:gap-4 mb-4">
                       <div className="text-center">
-                        <div className="text-2xl font-bold text-blue-600">
+                        <div className="text-xl md:text-2xl font-bold text-blue-600">
                           {workoutPreview.totalExercises}
                         </div>
-                        <Typography variant="body2" color="secondary">
+                        <Typography variant="body2" color="secondary" className="text-xs md:text-sm">
                           Exercises
                         </Typography>
                       </div>
                       <div className="text-center">
-                        <div className="text-2xl font-bold text-green-600">
+                        <div className="text-xl md:text-2xl font-bold text-green-600">
                           {workoutPreview.totalSets}
                         </div>
-                        <Typography variant="body2" color="secondary">
+                        <Typography variant="body2" color="secondary" className="text-xs md:text-sm">
                           Total Sets
                         </Typography>
                       </div>
                       <div className="text-center">
                         <div className="flex items-center justify-center gap-1">
-                          <Clock className="w-4 h-4 text-orange-600" />
-                          <span className="text-2xl font-bold text-orange-600">
+                          <Clock className="w-3 h-3 md:w-4 md:h-4 text-orange-600" />
+                          <span className="text-xl md:text-2xl font-bold text-orange-600">
                             {workoutPreview.estimatedTime}m
                           </span>
                         </div>
-                        <Typography variant="body2" color="secondary">
+                        <Typography variant="body2" color="secondary" className="text-xs md:text-sm">
                           Est. Time
                         </Typography>
                       </div>
                     </div>
-
-                    <div className="space-y-2">
-                      {workoutPreview.exercises.map((exercise, index) => (
-                        <div
-                          key={index}
-                          className="flex justify-between items-center p-2 bg-gray-50 rounded"
-                        >
-                          <div>
-                            <Typography variant="body2" className="font-medium">
-                              {exercise.name}
-                            </Typography>
-                            <Typography variant="body2" color="secondary">
-                              {exercise.sets} sets × {exercise.reps}
-                            </Typography>
-                          </div>
-                          {exercise.weight && (
-                            <div className="flex items-center gap-1">
-                              <Weight className="w-3 h-3 text-gray-500" />
-                              <Typography variant="body2" color="secondary">
-                                {exercise.weight}
-                              </Typography>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
                   </CardContent>
                 </Card>
-              ) : null}
+              )}
+              
+              {/* Editable Workout Preview */}
+              {editedWorkout && (
+                <EditableWorkoutPreview
+                  workout={editedWorkout}
+                  onUpdate={handleWorkoutUpdate}
+                  isEditing={isEditingPreview}
+                  onEditToggle={setIsEditingPreview}
+                />
+              )}
 
-              {/* Action Buttons */}
+              {/* Action Buttons - Hidden on mobile, shown in floating action button instead */}
               {parseResult?.success && (
-                <Card>
+                <Card className="hidden md:block">
                   <CardContent className="p-4">
                     <Flex gap="sm" direction="column">
                       <Button
@@ -702,6 +773,30 @@ export const TextWorkoutBuilder: React.FC<TextWorkoutBuilderProps> = ({
             </Flex>
           </div>
         </Modal>
+        
+        {/* Mobile Floating Action Buttons */}
+        {parseResult?.success && (
+          <div className="fixed bottom-20 right-4 md:hidden flex flex-col gap-2">
+            <Button
+              variant="outline"
+              onClick={handleSaveWorkout}
+              className="rounded-full shadow-lg bg-white"
+              size="lg"
+              disabled={!workoutText.trim()}
+            >
+              <Save className="w-5 h-5" />
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleStartWorkout}
+              className="rounded-full shadow-lg"
+              size="lg"
+              disabled={!parseResult.success}
+            >
+              <Play className="w-5 h-5" />
+            </Button>
+          </div>
+        )}
       </div>
     </Container>
   );
