@@ -37,6 +37,7 @@ export const WorkoutPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { activeWorkout, restTimer } = useSelector((state: RootState) => state.workout);
+  const { exercises } = useSelector((state: RootState) => state.exercise);
   const [showEndWorkoutModal, setShowEndWorkoutModal] = useState(false);
   const [showFailedSetModal, setShowFailedSetModal] = useState(false);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
@@ -48,25 +49,34 @@ export const WorkoutPage: React.FC = () => {
     
     if (workoutData && !activeWorkout) {
       // Convert WorkoutData to WorkoutExercise format for Redux
-      const workoutExercises: WorkoutExercise[] = workoutData.exercises.map((exercise, index) => ({
-        id: `exercise-${index}`,
-        exerciseId: exercise.exerciseId,
-        exerciseName: exercise.exerciseName,
-        sets: exercise.sets.map((set, setIndex) => ({
-          id: `set-${index}-${setIndex}`,
-          reps: set.targetReps,
-          weight: set.targetWeight,
-          time: set.targetTime,
-          distance: set.targetDistance,
+      const workoutExercises: WorkoutExercise[] = workoutData.exercises.map((exercise, index) => {
+        // Find the exercise in the directory to get video links
+        const exerciseDetails = exercises.find(e => 
+          e.id === exercise.exerciseId || 
+          e.name.toLowerCase() === exercise.exerciseName.toLowerCase()
+        );
+        
+        return {
+          id: `exercise-${index}`,
+          exerciseId: exercise.exerciseId,
+          exerciseName: exercise.exerciseName,
+          sets: exercise.sets.map((set, setIndex) => ({
+            id: `set-${index}-${setIndex}`,
+            reps: set.targetReps,
+            weight: set.targetWeight,
+            time: set.targetTime,
+            distance: set.targetDistance,
+            completed: false,
+            rpe: set.rpe,
+          })),
+          restTimeSeconds: exercise.restBetweenSets,
+          notes: exercise.notes,
           completed: false,
-          rpe: set.rpe,
-        })),
-        restTimeSeconds: exercise.restBetweenSets,
-        notes: exercise.notes,
-        completed: false,
-        isSuperset: exercise.supersetWith ? true : false,
-        supersetGroup: exercise.supersetWith,
-      }));
+          isSuperset: exercise.supersetWith ? true : false,
+          supersetGroup: exercise.supersetWith,
+          videoLinks: exerciseDetails?.videoLinks || [],
+        };
+      });
 
       // Start the workout
       dispatch(startWorkout({
@@ -78,7 +88,7 @@ export const WorkoutPage: React.FC = () => {
         currentSetIndex: 0,
       }));
     }
-  }, [location.state, activeWorkout, dispatch]);
+  }, [location.state, activeWorkout, dispatch, exercises]);
 
   // Update workout duration timer
   useEffect(() => {
@@ -390,6 +400,7 @@ export const WorkoutPage: React.FC = () => {
             })),
             restTime: currentExercise.restTimeSeconds,
             notes: currentExercise.notes,
+            videoLinks: currentExercise.videoLinks,
           }}
           state={currentExercise.completed ? 'completed' : restTimer.isActive ? 'resting' : 'active'}
           onSetComplete={handleSetComplete}

@@ -1,16 +1,15 @@
 import React, { useState } from 'react';
 import { Button } from '../ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
-import { Typography } from '../ui/Typography';
-import { Flex } from '../ui/Layout';
 import { Input } from '../ui/Input';
 import { cn } from '../../lib/utils';
 import type { WorkoutExercise, WorkoutSet } from '../../store/slices/workoutSlice';
+import { ExerciseVideo } from './ExerciseVideo';
 
 export type ExerciseCardState = 'pending' | 'active' | 'completed' | 'resting';
 
 export interface ExerciseCardProps {
-  exercise: WorkoutExercise;
+  exercise: WorkoutExercise & { videoLinks?: string[] };
   state?: ExerciseCardState;
   isCurrentExercise?: boolean;
   currentSetIndex?: number;
@@ -317,6 +316,15 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
       </CardHeader>
 
       <CardContent className="space-y-4">
+        {/* Exercise Video */}
+        {isCurrentExercise && state === 'active' && (
+          <ExerciseVideo
+            videoLinks={exercise.videoLinks}
+            exerciseName={exercise.exerciseName}
+            className="mb-4"
+          />
+        )}
+
         {/* Rest Timer */}
         {isResting && restTimeRemaining !== undefined && (
           <div className="p-4 bg-orange-500/5 border-2 border-orange-500/20 rounded-xl">

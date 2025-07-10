@@ -29,6 +29,7 @@ export interface WorkoutExercise {
   isSuperset?: boolean;
   supersetGroup?: string;
   progression?: ProgressionConfig;
+  videoLinks?: string[];
 }
 
 export interface WorkoutSet {
