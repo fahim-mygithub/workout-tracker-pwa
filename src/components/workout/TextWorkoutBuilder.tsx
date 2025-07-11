@@ -1,15 +1,17 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { startWorkout } from '../../store/slices/workoutSlice';
 import { parserService } from '../../parser/parserService';
-import { ExerciseMatcher } from '../../parser';
-import type { ParseResult, ParseError, Exercise as ParsedExercise, Workout } from '../../parser';
+import { ExerciseMatcher, ExerciseValidator } from '../../parser';
+import type { ParseResult, ParseError, Exercise as ParsedExercise, Workout, ExerciseValidationResult, UnmatchedExercise } from '../../parser';
 import type { ActiveWorkout, WorkoutExercise, WorkoutSet } from '../../store/slices/workoutSlice';
 import { useAuth } from '../../contexts/AuthContext';
 import { userProfileService } from '../../services/userProfile.service';
 import type { WorkoutData, WorkoutExercise as ServiceWorkoutExercise } from '../../types';
 import { EditableWorkoutPreview } from './EditableWorkoutPreview';
+import { ExerciseSearchModal } from './ExerciseSearchModal';
+import type { RootState } from '../../store';
 import './TextWorkoutBuilder.css';
 import {
   Container,
@@ -35,7 +37,8 @@ import {
   AlertTriangle,
   CheckCircle,
   Clock,
-  Weight
+  Weight,
+  Search
 } from 'lucide-react';
 
 interface TextWorkoutBuilderProps {
@@ -64,6 +67,7 @@ export const TextWorkoutBuilder: React.FC<TextWorkoutBuilderProps> = ({
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const exercises = useSelector((state: RootState) => state.exercise.exercises);
   
   const [workoutText, setWorkoutText] = useState(initialText);
   const [parseResult, setParseResult] = useState<ParseResult | null>(null);
@@ -81,6 +85,12 @@ export const TextWorkoutBuilder: React.FC<TextWorkoutBuilderProps> = ({
   const [editedWorkout, setEditedWorkout] = useState<Workout | null>(null);
   const [isEditingPreview, setIsEditingPreview] = useState(false);
   const [mobileTab, setMobileTab] = useState<'text' | 'preview'>('text');
+  const [validationResult, setValidationResult] = useState<ExerciseValidationResult | null>(null);
+  const [showInlineConfirmation, setShowInlineConfirmation] = useState(false);
+  const [selectedSuggestions, setSelectedSuggestions] = useState<Map<string, string>>(new Map());
+  const [bypassValidation, setBypassValidation] = useState(false);
+  const [showExerciseSearch, setShowExerciseSearch] = useState(false);
+  const [exerciseToReplace, setExerciseToReplace] = useState<string | null>(null);
 
   // Parse workout text with debouncing
   const parseWorkout = useCallback(
@@ -102,8 +112,30 @@ export const TextWorkoutBuilder: React.FC<TextWorkoutBuilderProps> = ({
           setIsLoading(true);
           
           try {
-            console.log('Parsing text:', text); // Debug log
-            const result = await parserService.parse(text);
+            // First validate exercises if not bypassed
+            if (!bypassValidation && text.trim()) {
+              const validation = await ExerciseValidator.validateWorkoutText(text, exercises);
+              setValidationResult(validation);
+              
+              // Always show confirmation if validation requires it
+              if (validation.requiresConfirmation) {
+                setShowInlineConfirmation(true);
+                // Continue parsing even when showing confirmation
+                // This allows the preview to be shown
+              }
+            }
+            
+            // Apply selected suggestions to text if any
+            let processedText = text;
+            if (selectedSuggestions.size > 0) {
+              selectedSuggestions.forEach((suggestion, original) => {
+                // Replace the original exercise name with the suggestion
+                const regex = new RegExp(`\\b${original}\\b`, 'gi');
+                processedText = processedText.replace(regex, suggestion);
+              });
+            }
+            
+            const result = await parserService.parse(processedText);
             setParseResult(result);
             
             if (result.success && result.workout) {
@@ -116,7 +148,6 @@ export const TextWorkoutBuilder: React.FC<TextWorkoutBuilderProps> = ({
             }
           } catch (error) {
             console.error('Parsing error:', error);
-            console.error('Text that caused error:', text); // Debug log
             
             // Check for specific errors
             let errorMessage = 'Unexpected parsing error';
@@ -146,7 +177,7 @@ export const TextWorkoutBuilder: React.FC<TextWorkoutBuilderProps> = ({
         }, delay);
       };
     })(),
-    []
+    [exercises, bypassValidation, selectedSuggestions]
   );
 
   // Generate workout preview data
@@ -296,9 +327,18 @@ export const TextWorkoutBuilder: React.FC<TextWorkoutBuilderProps> = ({
   const handleStartWorkout = () => {
     const workoutToStart = editedWorkout || parseResult?.workout;
     if (workoutToStart) {
-      const workoutData = convertToWorkoutState(workoutToStart);
-      dispatch(startWorkout(workoutData));
-      onWorkoutStart?.(workoutData);
+      // Convert to WorkoutData format for WorkoutPageV2
+      const workoutData: WorkoutData = {
+        id: `workout-${Date.now()}`,
+        name: 'Text Workout',
+        description: workoutText.substring(0, 100),
+        exercises: convertToServiceFormat(workoutToStart),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      
+      // Navigate to WorkoutPageV2 with state
+      navigate('/workout', { state: { workout: workoutData } });
     }
   };
   
@@ -308,6 +348,35 @@ export const TextWorkoutBuilder: React.FC<TextWorkoutBuilderProps> = ({
     const preview = generateWorkoutPreview(updatedWorkout);
     setWorkoutPreview(preview);
   };
+
+  // Handle suggestion selection in validation modal
+  const handleSuggestionSelect = (original: string, suggestion: string) => {
+    setSelectedSuggestions(prev => new Map(prev).set(original, suggestion));
+  };
+
+  // Handle continuing with validation suggestions
+  const handleContinueWithSuggestions = () => {
+    setShowInlineConfirmation(false);
+    setBypassValidation(true);
+    // Re-parse with selected suggestions
+    parseWorkout(workoutText);
+  };
+
+  // Handle proceeding anyway without suggestions
+  const handleProceedAnyway = () => {
+    setShowInlineConfirmation(false);
+    setBypassValidation(true);
+    // Clear any selected suggestions and parse as-is
+    setSelectedSuggestions(new Map());
+    parseWorkout(workoutText);
+  };
+
+  // Reset validation when text changes
+  useEffect(() => {
+    setBypassValidation(false);
+    setSelectedSuggestions(new Map());
+    setShowInlineConfirmation(false);
+  }, [workoutText]);
 
   // Convert parsed workout to service format
   const convertToServiceFormat = (parsedWorkout: any): ServiceWorkoutExercise[] => {
@@ -524,8 +593,71 @@ export const TextWorkoutBuilder: React.FC<TextWorkoutBuilderProps> = ({
               </CardContent>
             </Card>
 
+            {/* Inline Exercise Confirmation */}
+            {showInlineConfirmation && validationResult && (
+              <Card className="border-blue-200 bg-blue-50">
+                <CardContent className="p-4">
+                  <div className="space-y-4">
+                    <div className="flex items-start gap-3">
+                      <HelpCircle className="h-5 w-5 text-blue-600 mt-0.5" />
+                      <div className="flex-1">
+                        <Typography variant="h6" className="font-semibold mb-1">
+                          Confirm Exercises
+                        </Typography>
+                        <Typography variant="body2" color="secondary">
+                          Review the matched exercises below and make sure they're correct.
+                        </Typography>
+                      </div>
+                    </div>
+
+                    {/* Confirmed Exercises */}
+                    {validationResult.matchedExercises?.length > 0 && (
+                      <div className="space-y-2">
+                        <Typography variant="body2" className="font-medium">
+                          Confirmed Exercises
+                        </Typography>
+                        {validationResult.matchedExercises.map((matched, index) => (
+                          <div key={`matched-${index}`} className="bg-white p-3 rounded-md border border-green-200">
+                            <div className="flex items-center gap-2">
+                              <CheckCircle className="w-4 h-4 text-green-600" />
+                              <span className="font-medium text-sm">{matched.matched}</span>
+                              {matched.original.toLowerCase() !== matched.matched.toLowerCase() && (
+                                <span className="text-xs text-gray-500">
+                                  (from "{matched.original}")
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Action buttons */}
+                    <Flex gap="sm" className="mt-4">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleProceedAnyway}
+                        className="flex-1"
+                      >
+                        Use Original Names
+                      </Button>
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={handleContinueWithSuggestions}
+                        className="flex-1"
+                      >
+                        Confirm Exercises
+                      </Button>
+                    </Flex>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Parse Status */}
-            {parseResult && (
+            {parseResult && !showInlineConfirmation && (
               <Card className="md:block">
                 <CardContent className="p-3 md:p-4">
                   <div className="flex items-center gap-2 mb-2 md:mb-3">
@@ -660,7 +792,7 @@ export const TextWorkoutBuilder: React.FC<TextWorkoutBuilderProps> = ({
                         variant="primary"
                         onClick={handleStartWorkout}
                         className="w-full"
-                        disabled={!parseResult.success}
+                        disabled={!parseResult.success || showInlineConfirmation}
                       >
                         <Play className="w-4 h-4 mr-2" />
                         Start Workout
@@ -804,6 +936,24 @@ export const TextWorkoutBuilder: React.FC<TextWorkoutBuilderProps> = ({
             </Flex>
           </div>
         </Modal>
+
+
+        {/* Exercise Search Modal */}
+        <ExerciseSearchModal
+          isOpen={showExerciseSearch}
+          onClose={() => {
+            setShowExerciseSearch(false);
+            setExerciseToReplace(null);
+          }}
+          onSelect={(exercise) => {
+            if (exerciseToReplace) {
+              setSelectedSuggestions(prev => new Map(prev).set(exerciseToReplace, exercise.name));
+              setShowExerciseSearch(false);
+              setExerciseToReplace(null);
+            }
+          }}
+          currentExercise={exerciseToReplace || undefined}
+        />
         
         {/* Mobile Floating Action Buttons */}
         {parseResult?.success && (
@@ -822,7 +972,7 @@ export const TextWorkoutBuilder: React.FC<TextWorkoutBuilderProps> = ({
               onClick={handleStartWorkout}
               className="rounded-full shadow-lg"
               size="lg"
-              disabled={!parseResult.success}
+              disabled={!parseResult.success || showInlineConfirmation}
             >
               <Play className="w-5 h-5" />
             </Button>

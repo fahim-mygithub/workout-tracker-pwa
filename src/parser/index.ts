@@ -1,6 +1,7 @@
 export { WorkoutParser } from './parser';
 export { Tokenizer } from './tokenizer';
 export { ExerciseMatcher, EXERCISE_DATABASE } from './exerciseDatabase';
+export { ExerciseValidator } from './exerciseValidator';
 
 // Value exports (enums)
 export { TokenType } from './types';
@@ -20,3 +21,10 @@ export type {
   ParseSuggestion, 
   ParseResult 
 } from './types';
+
+export type {
+  ExerciseValidationResult,
+  UnmatchedExercise,
+  ExerciseSuggestion,
+  ValidationWarning
+} from './exerciseValidator';

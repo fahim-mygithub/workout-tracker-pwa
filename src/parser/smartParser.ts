@@ -17,20 +17,22 @@ export class SmartParser {
       
       for (const line of lines) {
         const trimmedLine = line.trim();
-        console.log('Parsing line:', trimmedLine);
         
         // Check for superset
         if (trimmedLine.toLowerCase().includes(' ss ')) {
           const parts = trimmedLine.split(/\s+ss\s+/i);
           const exercises: Exercise[] = [];
-          let firstExerciseSetCount: number | null = null;
+          let firstExerciseInfo: { setCount: number; reps: RepsValue } | null = null;
           
           for (let i = 0; i < parts.length; i++) {
-            const exercise = this.parseExerciseLine(parts[i].trim(), i > 0 ? firstExerciseSetCount : null);
+            const exercise = this.parseExerciseLine(parts[i].trim(), i > 0 ? firstExerciseInfo : null);
             if (exercise) {
-              // Store the set count from the first exercise
-              if (i === 0) {
-                firstExerciseSetCount = exercise.sets.length;
+              // Store the set info from the first exercise
+              if (i === 0 && exercise.sets.length > 0) {
+                firstExerciseInfo = {
+                  setCount: exercise.sets.length,
+                  reps: exercise.sets[0].reps
+                };
               }
               exercises.push(exercise);
               // Check if exercise is in database and add suggestions if not
@@ -92,7 +94,7 @@ export class SmartParser {
     }
   }
   
-  private parseExerciseLine(line: string, defaultSetCount: number | null = null): Exercise | null {
+  private parseExerciseLine(line: string, defaultSetInfo: { setCount: number; reps: RepsValue } | null = null): Exercise | null {
     // Handle the specific format: "5x Incline db 3X8-10 @ 75lbs"
     // This should be 5 sets of 8-10 reps at 75lbs
     
@@ -117,8 +119,6 @@ export class SmartParser {
       const exerciseName = specialMatch[2].trim();
       const repsStr = specialMatch[4];
       const reps = this.parseReps(repsStr); // Use the rep range from the second part
-      
-      console.log(`Parsed special format: ${setCount} sets of ${exerciseName}, repsStr: "${repsStr}", parsed reps: ${JSON.stringify(reps)}`);
       
       const sets: ExerciseSet[] = [];
       for (let i = 0; i < Math.min(setCount, 20); i++) {
@@ -188,10 +188,8 @@ export class SmartParser {
       const repsStr = fallbackMatch[2];
       const reps = this.parseReps(repsStr);
       
-      console.log(`Fallback parsing: exercise="${exerciseName}", reps="${repsStr}", parsed=${JSON.stringify(reps)}`);
-      
-      // Use defaultSetCount if provided, otherwise default to 3 sets when no set count is specified but reps are
-      const setCount = defaultSetCount || 3;
+      // Use defaultSetInfo if provided, otherwise default to 3 sets when no set count is specified but reps are
+      const setCount = defaultSetInfo?.setCount || 3;
       const sets: ExerciseSet[] = [];
       for (let i = 0; i < setCount; i++) {
         const set: ExerciseSet = { reps };
@@ -208,15 +206,21 @@ export class SmartParser {
     }
     
     // Final fallback: just the exercise name with default sets
+    // If defaultSetInfo is provided (for supersets), inherit from first exercise
+    const setCount = defaultSetInfo?.setCount || 1;
+    const reps = defaultSetInfo?.reps || 10;
+    const sets: ExerciseSet[] = [];
+    for (let i = 0; i < setCount; i++) {
+      sets.push({ reps });
+    }
+    
     return {
       name: lineWithoutWeight,
-      sets: [{ reps: 10 }]
+      sets
     };
   }
   
   private parseReps(repsStr: string): RepsValue {
-    console.log(`parseReps called with: "${repsStr}"`);
-    
     if (repsStr.toLowerCase() === 'amrap') {
       return 'AMRAP';
     }
@@ -225,13 +229,11 @@ export class SmartParser {
       const [minStr, maxStr] = repsStr.split('-');
       const min = parseInt(minStr) || 10;
       const max = parseInt(maxStr) || min;
-      console.log(`Parsed rep range: min=${min}, max=${max}`);
       return { min, max };
     }
     
     const reps = parseInt(repsStr);
     const result = isNaN(reps) || reps <= 0 || reps > 100 ? 10 : reps;
-    console.log(`Parsed single rep value: ${result}`);
     return result;
   }
   
