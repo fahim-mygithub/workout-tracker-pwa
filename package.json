@@ -9,6 +9,7 @@
     "chrome:launch": "./scripts/launch-chrome-debug.sh",
     "chrome:kill": "pkill -f 'remote-debugging-port=9222' || true",
     "build": "tsc -b && vite build",
+    "build:prod": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest",
