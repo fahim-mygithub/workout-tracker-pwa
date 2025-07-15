@@ -158,7 +158,7 @@ export const MobileExerciseCard: React.FC<MobileExerciseCardProps> = ({
       onExerciseComplete?.(exercise.id);
     } else {
       // Start rest timer
-      const restDuration = exercise.sets[setIndex].restAfter || 90;
+      const restDuration = 90; // Default rest duration in seconds
       onStartRest?.(exercise.id, restDuration);
     }
   };
@@ -184,11 +184,8 @@ export const MobileExerciseCard: React.FC<MobileExerciseCardProps> = ({
         <CardHeader className="p-4 pb-2">
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <h3 className="text-lg font-semibold line-clamp-1">{exercise.name}</h3>
+              <h3 className="text-lg font-semibold line-clamp-1">{exercise.exerciseName}</h3>
               <div className="flex items-center gap-2 mt-1">
-                <span className="text-xs font-medium text-primary">
-                  {exercise.primaryMuscle}
-                </span>
                 <span className="text-xs text-muted-foreground">
                   {completedSets}/{totalSets} sets
                 </span>
@@ -265,9 +262,9 @@ export const MobileExerciseCard: React.FC<MobileExerciseCardProps> = ({
       <Sheet open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
         <SheetContent side="bottom" className="h-[80vh]">
           <SheetHeader>
-            <SheetTitle>{exercise.name}</SheetTitle>
+            <SheetTitle>{exercise.exerciseName}</SheetTitle>
             <SheetDescription>
-              {exercise.primaryMuscle} • {exercise.equipment}
+              Exercise Details
             </SheetDescription>
           </SheetHeader>
           

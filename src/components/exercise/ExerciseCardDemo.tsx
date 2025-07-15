@@ -59,7 +59,6 @@ export const ExerciseCardDemo: React.FC = () => {
   const [restTimeRemaining, setRestTimeRemaining] = useState<number | undefined>();
   const [restInterval, setRestInterval] = useState<NodeJS.Timeout | null>(null);
 
-  const currentExercise = exercises[currentExerciseIndex];
   const isResting = restTimeRemaining !== undefined && restTimeRemaining > 0;
 
   const handleSetComplete = (exerciseId: string, setId: string, setData: Partial<WorkoutSet>) => {
@@ -97,7 +96,7 @@ export const ExerciseCardDemo: React.FC = () => {
     }
   };
 
-  const handleStartRest = (exerciseId: string, duration: number) => {
+  const handleStartRest = (_exerciseId: string, duration: number) => {
     setRestTimeRemaining(duration);
     
     const interval = setInterval(() => {

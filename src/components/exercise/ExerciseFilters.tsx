@@ -66,7 +66,6 @@ const FilterSection: React.FC<FilterSectionProps> = ({
   options,
   selectedValues,
   onToggle,
-  multiSelect = true,
 }) => {
   const [isExpanded, setIsExpanded] = useState(true);
 

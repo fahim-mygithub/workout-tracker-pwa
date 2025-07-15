@@ -23,7 +23,7 @@ export const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({
 
   // Reset video states when exercise changes
   useEffect(() => {
-    if (exercise?.videoLinks.length > 0) {
+    if (exercise?.videoLinks && exercise.videoLinks.length > 0) {
       setActiveVideoIndex(0);
       setVideoError(false);
       setVideoLoading(true);
@@ -195,7 +195,7 @@ export const ExerciseDetailModal: React.FC<ExerciseDetailModalProps> = ({
                     
                     {/* Video selection buttons */}
                     <div className="flex flex-wrap gap-2">
-                      {exercise.videoLinks.map((link, index) => (
+                      {exercise.videoLinks.map((_link, index) => (
                         <Button
                           key={index}
                           variant="outline"
