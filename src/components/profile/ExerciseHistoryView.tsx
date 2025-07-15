@@ -37,6 +37,11 @@ export const ExerciseHistoryView: React.FC<ExerciseHistoryViewProps> = ({
       if (exerciseId) {
         loadStats();
       }
+    } else {
+      // Clear data when user logs out
+      setHistory([]);
+      setStats(null);
+      setLoading(false);
     }
   }, [user, exerciseId]);
 
@@ -98,6 +103,11 @@ export const ExerciseHistoryView: React.FC<ExerciseHistoryViewProps> = ({
       return total;
     }, 0);
   };
+
+  // Don't render anything if user is not authenticated
+  if (!user) {
+    return null;
+  }
 
   if (loading) {
     return (

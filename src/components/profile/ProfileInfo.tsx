@@ -157,7 +157,7 @@ export const ProfileInfo: React.FC<ProfileInfoProps> = ({ profile, onUpdate }) =
               <Typography variant="body2" color="muted" className="mb-1">
                 Email
               </Typography>
-              <Typography variant="body1">{profile.email}</Typography>
+              <Typography variant="body1" className="break-all">{profile.email}</Typography>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

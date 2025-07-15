@@ -150,7 +150,7 @@ export const ProfilePage: React.FC = () => {
     );
   }
 
-  if (!profile) {
+  if (!user || !profile) {
     return null;
   }
 

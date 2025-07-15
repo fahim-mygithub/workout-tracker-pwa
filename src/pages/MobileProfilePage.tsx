@@ -152,7 +152,7 @@ export const MobileProfilePage: React.FC = () => {
     );
   }
 
-  if (!profile) {
+  if (!user || !profile) {
     return null;
   }
 

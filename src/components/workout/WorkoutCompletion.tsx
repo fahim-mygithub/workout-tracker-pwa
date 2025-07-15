@@ -83,7 +83,7 @@ export const WorkoutCompletion: React.FC<WorkoutCompletionProps> = ({
     // Update workout stats before ending
     dispatch(updateWorkoutStats());
     dispatch(endWorkout());
-    navigate('/');
+    navigate('/workout', { replace: true, state: null });
   };
 
   const stats = getWorkoutStats();

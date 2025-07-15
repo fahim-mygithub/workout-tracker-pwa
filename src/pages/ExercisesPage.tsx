@@ -102,6 +102,8 @@ export const ExercisesPage: React.FC = () => {
         }],
         restTimeSeconds: 90,
         completed: false,
+        videoUrl: exercise.videoLinks?.[0], // Map first video URL
+        thumbnailUrl: undefined,
       }],
       currentExerciseIndex: 0,
       currentSetIndex: 0,

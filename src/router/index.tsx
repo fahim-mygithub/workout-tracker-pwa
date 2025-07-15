@@ -2,7 +2,10 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import { AppLayout } from '../components/layout';
 import { 
   HomePage, 
-  WorkoutPage, 
+  WorkoutRouter,
+  WorkoutPageV2,
+  WorkoutV2Demo,
+  WorkoutLandingPage, 
   BuildPage, 
   ExercisesPage, 
   ProfilePage,
@@ -23,7 +26,15 @@ const router = createBrowserRouter([
       },
       {
         path: 'workout',
-        element: <WorkoutPage />,
+        element: <WorkoutRouter />,
+      },
+      {
+        path: 'workout-v2',
+        element: <WorkoutPageV2 />,
+      },
+      {
+        path: 'workout-v2-demo',
+        element: <WorkoutV2Demo />,
       },
       {
         path: 'build',

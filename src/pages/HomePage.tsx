@@ -84,6 +84,10 @@ export const HomePage: React.FC = () => {
     navigate('/build');
   };
 
+  const handleWorkoutV2Demo = () => {
+    navigate('/workout-v2-demo');
+  };
+
   return (
     <div className="flex flex-col bg-gray-50">
       {/* App Title Section */}
@@ -304,6 +308,16 @@ export const HomePage: React.FC = () => {
             className="bg-gray-200 text-gray-900 py-3 rounded-xl hover:bg-gray-300 transition-colors font-medium"
           >
             Build Workout
+          </button>
+        </div>
+
+        {/* Demo Button */}
+        <div className="mt-4">
+          <button 
+            onClick={handleWorkoutV2Demo}
+            className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 rounded-xl hover:opacity-90 transition-opacity font-medium shadow-lg"
+          >
+            🎯 Try New Workout Experience
           </button>
         </div>
       </main>

@@ -252,22 +252,22 @@ export const BMICalculator: React.FC<BMICalculatorProps> = ({ profile, onUpdate 
           <Typography variant="body2" color="muted" className="mb-3">
             BMI Categories
           </Typography>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 text-sm">
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-              <span className="text-gray-600">Underweight (&lt;18.5)</span>
+              <div className="w-3 h-3 rounded-full bg-blue-500 flex-shrink-0"></div>
+              <span className="text-gray-600 truncate">Underweight (&lt;18.5)</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-green-500"></div>
-              <span className="text-gray-600">Normal (18.5-24.9)</span>
+              <div className="w-3 h-3 rounded-full bg-green-500 flex-shrink-0"></div>
+              <span className="text-gray-600 truncate">Normal (18.5-24.9)</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-              <span className="text-gray-600">Overweight (25-29.9)</span>
+              <div className="w-3 h-3 rounded-full bg-yellow-500 flex-shrink-0"></div>
+              <span className="text-gray-600 truncate">Overweight (25-29.9)</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-red-500"></div>
-              <span className="text-gray-600">Obese (≥30)</span>
+              <div className="w-3 h-3 rounded-full bg-red-500 flex-shrink-0"></div>
+              <span className="text-gray-600 truncate">Obese (≥30)</span>
             </div>
           </div>
         </div>

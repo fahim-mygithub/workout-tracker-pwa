@@ -19,6 +19,7 @@ export const ExerciseVideo: React.FC<ExerciseVideoProps> = ({
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const videoRef = React.useRef<HTMLVideoElement>(null);
 
   const hasVideos = videoLinks.length > 0;
   const hasMultipleVideos = videoLinks.length > 1;
@@ -96,6 +97,7 @@ export const ExerciseVideo: React.FC<ExerciseVideoProps> = ({
     <Card className={cn('overflow-hidden', className)}>
       <div className="relative bg-black">
         <video
+          ref={videoRef}
           key={videoLinks[currentVideoIndex]}
           className="w-full h-full max-h-[400px] object-contain"
           autoPlay={isPlaying}
@@ -142,13 +144,12 @@ export const ExerciseVideo: React.FC<ExerciseVideoProps> = ({
         {/* Play/Pause Button */}
         <button
           onClick={() => {
-            const video = document.querySelector('video');
-            if (video) {
-              if (video.paused) {
-                video.play();
+            if (videoRef.current) {
+              if (videoRef.current.paused) {
+                videoRef.current.play();
                 setIsPlaying(true);
               } else {
-                video.pause();
+                videoRef.current.pause();
                 setIsPlaying(false);
               }
             }

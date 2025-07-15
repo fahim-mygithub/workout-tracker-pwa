@@ -13,6 +13,7 @@ import {
   previousSet,
   completeSet,
   updateWorkoutDuration,
+  startRestTimer,
   type WorkoutSet,
   type WorkoutExercise
 } from '../store/slices/workoutSlice';
@@ -31,6 +32,7 @@ import { RestTimer } from '../components/timer';
 import { FailedSetModal, SupersetIndicator, WorkoutCompletion } from '../components/workout';
 import { Clock, Play, Pause, Square, ChevronLeft, ChevronRight, Home, AlertTriangle } from 'lucide-react';
 import type { WorkoutData } from '../types';
+import { findExerciseInDirectory } from '../utils/exerciseMatching';
 
 export const WorkoutPage: React.FC = () => {
   const dispatch = useDispatch();
@@ -42,23 +44,28 @@ export const WorkoutPage: React.FC = () => {
   const [showFailedSetModal, setShowFailedSetModal] = useState(false);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [workoutTimer, setWorkoutTimer] = useState(0);
+  const [hasStartedWorkout, setHasStartedWorkout] = useState(false);
 
   // Handle workout from navigation state (e.g., from profile page)
   useEffect(() => {
     const workoutData = location.state?.workout as WorkoutData | undefined;
     
-    if (workoutData && !activeWorkout) {
+    console.log('[WorkoutPage] useEffect - location.state:', location.state);
+    console.log('[WorkoutPage] useEffect - workoutData:', workoutData);
+    console.log('[WorkoutPage] useEffect - activeWorkout:', activeWorkout);
+    console.log('[WorkoutPage] useEffect - hasStartedWorkout:', hasStartedWorkout);
+    
+    if (workoutData && !activeWorkout && !hasStartedWorkout) {
+      console.log('[WorkoutPage] Starting workout from navigation state');
+      setHasStartedWorkout(true);
       // Convert WorkoutData to WorkoutExercise format for Redux
       const workoutExercises: WorkoutExercise[] = workoutData.exercises.map((exercise, index) => {
-        // Find the exercise in the directory to get video links
-        const exerciseDetails = exercises.find(e => 
-          e.id === exercise.exerciseId || 
-          e.name.toLowerCase() === exercise.exerciseName.toLowerCase()
-        );
+        // Find the exercise in the directory using fuzzy matching
+        const matchedExercise = findExerciseInDirectory(exercise.exerciseName, exercises);
         
         return {
           id: `exercise-${index}`,
-          exerciseId: exercise.exerciseId,
+          exerciseId: exercise.exerciseId || matchedExercise?.id || `custom-${index}`,
           exerciseName: exercise.exerciseName,
           sets: exercise.sets.map((set, setIndex) => ({
             id: `set-${index}-${setIndex}`,
@@ -69,12 +76,12 @@ export const WorkoutPage: React.FC = () => {
             completed: false,
             rpe: set.rpe,
           })),
-          restTimeSeconds: exercise.restBetweenSets,
+          restTimeSeconds: exercise.restBetweenSets || 120, // Default 2 minutes
           notes: exercise.notes,
           completed: false,
-          isSuperset: exercise.supersetWith ? true : false,
-          supersetGroup: exercise.supersetWith,
-          videoLinks: exerciseDetails?.videoLinks || [],
+          isSuperset: exercise.supersetWith && exercise.supersetWith.length > 0,
+          supersetGroup: exercise.supersetWith?.[0],
+          videoLinks: matchedExercise?.videoLinks || [],
         };
       });
 
@@ -82,13 +89,12 @@ export const WorkoutPage: React.FC = () => {
       dispatch(startWorkout({
         id: `workout-${Date.now()}`,
         name: workoutData.name,
-        description: workoutData.description,
         exercises: workoutExercises,
         currentExerciseIndex: 0,
         currentSetIndex: 0,
       }));
     }
-  }, [location.state, activeWorkout, dispatch, exercises]);
+  }, [location.state, activeWorkout, dispatch, exercises, hasStartedWorkout]);
 
   // Update workout duration timer
   useEffect(() => {
@@ -104,13 +110,6 @@ export const WorkoutPage: React.FC = () => {
 
     return () => clearInterval(interval);
   }, [activeWorkout?.isActive, activeWorkout?.startTime, dispatch]);
-
-  // Redirect if no active workout and no workout data in navigation state
-  useEffect(() => {
-    if (!activeWorkout && !location.state?.workout) {
-      navigate('/');
-    }
-  }, [activeWorkout, location.state, navigate]);
 
   if (!activeWorkout) {
     return (
@@ -160,7 +159,7 @@ export const WorkoutPage: React.FC = () => {
 
   const handleEndWorkout = () => {
     dispatch(endWorkout());
-    navigate('/');
+    navigate('/workout', { replace: true, state: null });
   };
 
   const handleNextExercise = () => {
@@ -193,6 +192,12 @@ export const WorkoutPage: React.FC = () => {
       setIndex: activeWorkout.currentSetIndex,
       actualValues,
     }));
+
+    // Start rest timer with default 2 minutes (120 seconds) or exercise-specific time
+    const restTime = currentExercise.restTimeSeconds || 120; // Default 2 minutes
+    if (!isLastSet) {
+      dispatch(startRestTimer({ seconds: restTime, exerciseId: currentExercise.id }));
+    }
 
     // Check if workout is complete
     const allExercisesComplete = activeWorkout.exercises.every(exercise =>
@@ -232,7 +237,7 @@ export const WorkoutPage: React.FC = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => navigate('/')}
+                onClick={() => navigate('/workout')}
                 className="text-gray-500 hover:text-gray-700"
               >
                 <Home className="w-4 h-4" />
@@ -387,26 +392,13 @@ export const WorkoutPage: React.FC = () => {
 
         {/* Current Exercise Card */}
         <ExerciseCard
-          exercise={{
-            id: currentExercise.exerciseId,
-            name: currentExercise.exerciseName,
-            sets: currentExercise.sets.map((set, index) => ({
-              reps: set.reps,
-              weight: set.weight,
-              time: set.time,
-              distance: set.distance,
-              completed: set.completed,
-              isActive: index === activeWorkout.currentSetIndex,
-            })),
-            restTime: currentExercise.restTimeSeconds,
-            notes: currentExercise.notes,
-            videoLinks: currentExercise.videoLinks,
-          }}
+          exercise={currentExercise}
           state={currentExercise.completed ? 'completed' : restTimer.isActive ? 'resting' : 'active'}
-          onSetComplete={handleSetComplete}
-          onSkip={() => {
-            if (!isLastExercise) {
-              handleNextExercise();
+          isCurrentExercise={true}
+          onSetComplete={(setId, setData) => {
+            const setIndex = currentExercise.sets.findIndex(s => s.id === setId);
+            if (setIndex !== -1) {
+              handleSetComplete(setData);
             }
           }}
           currentSetIndex={activeWorkout.currentSetIndex}
@@ -427,8 +419,9 @@ export const WorkoutPage: React.FC = () => {
           <Alert
             variant="warning"
             title="Workout Paused"
-            description="Your workout is currently paused. Tap Resume to continue."
-          />
+          >
+            Your workout is currently paused. Tap Resume to continue.
+          </Alert>
         )}
       </div>
 

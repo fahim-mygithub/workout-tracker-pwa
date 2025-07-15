@@ -143,6 +143,8 @@ export const VisualWorkoutBuilder: React.FC<VisualWorkoutBuilderProps> = ({ onWo
         ],
         restTimeSeconds: 90,
         completed: false,
+        videoUrl: draggedExercise.videoLinks?.[0], // Map first video URL
+        thumbnailUrl: undefined, // Could be generated from video URL if needed
       };
       
       setWorkoutExercises([...workoutExercises, newExercise]);

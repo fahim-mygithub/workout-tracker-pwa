@@ -71,9 +71,14 @@ class ExerciseHistoryService {
       return history
         .sort((a, b) => b.performedAt.getTime() - a.performedAt.getTime())
         .slice(0, limitCount);
-    } catch (error) {
+    } catch (error: any) {
+      // Handle permission errors gracefully - these are expected for new users
+      if (error?.code === 'permission-denied') {
+        // Silently return empty array for permission denied
+        return [];
+      }
+      // Only log unexpected errors
       console.error('Error getting exercise history:', error);
-      // Return empty array instead of throwing
       return [];
     }
   }
@@ -100,9 +105,14 @@ class ExerciseHistoryService {
       return history
         .sort((a, b) => b.performedAt.getTime() - a.performedAt.getTime())
         .slice(0, limitCount);
-    } catch (error) {
+    } catch (error: any) {
+      // Handle permission errors gracefully - these are expected for new users
+      if (error?.code === 'permission-denied') {
+        // Silently return empty array for permission denied
+        return [];
+      }
+      // Only log unexpected errors
       console.error('Error getting user history:', error);
-      // Return empty array instead of throwing
       return [];
     }
   }

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Container, Typography, Button, Flex } from '../components/ui';
 import { TextWorkoutBuilder } from '../components/workout/TextWorkoutBuilder';
 import { VisualWorkoutBuilder } from '../components/workout/VisualWorkoutBuilder';
+import { ExerciseLoader } from '../components/ExerciseLoader';
 import { FileText, Shapes, Download } from 'lucide-react';
 
 type BuildMode = 'text' | 'visual' | 'templates';
@@ -16,8 +17,10 @@ export const BuildPage: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="7xl" padding="lg">
-      <div className="space-y-6">
+    <>
+      <ExerciseLoader />
+      <Container maxWidth="7xl" padding="lg">
+        <div className="space-y-6">
         {/* Header */}
         <div className="text-center">
           <Typography variant="h1" className="mb-2">
@@ -84,5 +87,6 @@ export const BuildPage: React.FC = () => {
         )}
       </div>
     </Container>
+    </>
   );
 };

@@ -39,6 +39,9 @@ const alertIcons = {
 
 export const Alert = React.forwardRef<HTMLDivElement, AlertProps>(
   ({ className, variant = 'info', title, onClose, children, ...props }, ref) => {
+    // Filter out non-HTML props
+    const { platform, ...htmlProps } = props as Record<string, unknown>;
+    
     return (
       <div
         ref={ref}
@@ -48,7 +51,7 @@ export const Alert = React.forwardRef<HTMLDivElement, AlertProps>(
           className
         )}
         role="alert"
-        {...props}
+        {...htmlProps}
       >
         <div className="flex">
           <div className="flex-shrink-0">

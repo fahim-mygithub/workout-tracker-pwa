@@ -16,7 +16,6 @@ export const useLoadExercises = () => {
         try {
           const loadedExercises = await loadExercisesFromCSV();
           dispatch(setExercises(loadedExercises));
-          console.log(`Loaded ${loadedExercises.length} exercises`);
         } catch (error) {
           console.error('Failed to load exercises:', error);
           dispatch(setError('Failed to load exercises. Please try again later.'));

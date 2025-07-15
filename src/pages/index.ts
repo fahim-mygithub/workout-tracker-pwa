@@ -1,6 +1,10 @@
 // Desktop Components
 export { HomePage as DesktopHomePage } from './HomePage';
 export { WorkoutPage as DesktopWorkoutPage } from './WorkoutPage';
+export { WorkoutPageV2 } from './WorkoutPageV2';
+export { WorkoutV2Demo } from './WorkoutV2Demo';
+export { WorkoutLandingPage } from './WorkoutLandingPage';
+export { WorkoutRouter } from './WorkoutRouter';
 export { BuildPage } from './BuildPage';
 export { ExercisesPage } from './ExercisesPage';
 export { ProfilePage as DesktopProfilePage } from './ProfilePage';

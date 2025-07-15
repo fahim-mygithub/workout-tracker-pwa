@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Home, Dumbbell, Plus, List, BarChart3, User } from 'lucide-react';
+import { Home, Dumbbell, Plus, List, User } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 interface NavItem {

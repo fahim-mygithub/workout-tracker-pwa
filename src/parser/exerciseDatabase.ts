@@ -1,7 +1,7 @@
 // Common exercise names and their variations
 export const EXERCISE_DATABASE = {
   // Chest
-  'bench press': ['bench', 'bp', 'barbell bench', 'bb bench'],
+  'bench press': ['bench', 'bp', 'barbell bench', 'bb bench', 'benchpress', 'bench-press'],
   'dumbbell bench press': ['db bench', 'dumbbell bench', 'db press'],
   'incline bench press': ['incline bench', 'incline press', 'incline bp'],
   'decline bench press': ['decline bench', 'decline press', 'decline bp'],
@@ -44,6 +44,7 @@ export const EXERCISE_DATABASE = {
   'upright row': ['upright rows'],
   'face pulls': ['face pull', 'facepulls'],
   'shrugs': ['barbell shrugs', 'dumbbell shrugs', 'trap shrugs'],
+  'band pull aparts': ['banded pull aparts', 'band pulls', 'pull aparts'],
   
   // Arms
   'barbell curl': ['bb curl', 'curls', 'bicep curls', 'straight bar curl'],

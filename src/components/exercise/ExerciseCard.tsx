@@ -362,7 +362,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
               key={set.id}
               set={set}
               index={index}
-              isActive={isCurrentExercise && currentSetIndex === index && !set.completed}
+              isActive={isCurrentExercise && currentSetIndex === index && state === 'active' && !set.completed}
               isCompleted={set.completed}
               onSetComplete={(setData) => handleSetComplete(set.id, setData)}
               onEditSet={(setData) => onEditSet?.(set.id, setData)}

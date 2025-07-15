@@ -74,21 +74,30 @@ class UserProfileService {
   }
 
   async getUserProfile(uid: string): Promise<UserProfile | null> {
-    const docRef = doc(db, this.USERS_COLLECTION, uid);
-    const docSnap = await getDoc(docRef);
-    
-    if (docSnap.exists()) {
-      const data = docSnap.data();
-      return {
-        ...data,
-        createdAt: data.createdAt?.toDate() || new Date(),
-        updatedAt: data.updatedAt?.toDate() || new Date(),
-        birthday: data.birthday?.toDate(),
-        lastSyncedAt: data.lastSyncedAt?.toDate()
-      } as UserProfile;
+    try {
+      const docRef = doc(db, this.USERS_COLLECTION, uid);
+      const docSnap = await getDoc(docRef);
+      
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        return {
+          ...data,
+          createdAt: data.createdAt?.toDate() || new Date(),
+          updatedAt: data.updatedAt?.toDate() || new Date(),
+          birthday: data.birthday?.toDate(),
+          lastSyncedAt: data.lastSyncedAt?.toDate()
+        } as UserProfile;
+      }
+      
+      return null;
+    } catch (error) {
+      // Handle permission errors gracefully
+      if (error instanceof Error && 'code' in error && (error as any).code === 'permission-denied') {
+        console.log('User profile does not exist yet, will be created');
+        return null;
+      }
+      throw error;
     }
-    
-    return null;
   }
 
   async updateUserProfile(uid: string, updates: Partial<UserProfile>): Promise<void> {

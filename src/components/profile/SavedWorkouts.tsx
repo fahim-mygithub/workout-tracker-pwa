@@ -41,8 +41,8 @@ export const SavedWorkouts: React.FC<SavedWorkoutsProps> = ({
   };
 
   const handleStartWorkout = (workout: WorkoutData) => {
-    // Navigate to workout screen with this workout loaded
-    navigate('/workout', { state: { workout } });
+    // Navigate to new workout screen with this workout loaded
+    navigate('/workout-v2', { state: { workout } });
   };
 
   return (

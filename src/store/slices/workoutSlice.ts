@@ -114,11 +114,13 @@ const workoutSlice = createSlice({
     },
 
     endWorkout: (state) => {
+      console.log('[workoutSlice] endWorkout reducer - activeWorkout before:', state.activeWorkout);
       if (state.activeWorkout) {
         state.workoutHistory.unshift(state.activeWorkout.id);
         state.activeWorkout = null;
       }
       state.restTimer = initialState.restTimer;
+      console.log('[workoutSlice] endWorkout reducer - activeWorkout after:', state.activeWorkout);
     },
 
     pauseWorkout: (state) => {

@@ -57,6 +57,8 @@ export interface WorkoutExercise {
   notes?: string;
   restTime?: number; // override default rest time
   supersetWith?: string[]; // exercise IDs in same superset
+  videoUrl?: string;
+  thumbnailUrl?: string;
 }
 
 export interface ExerciseSet {
@@ -65,6 +67,7 @@ export interface ExerciseSet {
   targetTime?: number; // for time-based exercises
   targetDistance?: number; // for distance-based exercises
   rpe?: number;
+  restBetweenSets?: number; // rest time after this set in seconds
 }
 
 export interface ExerciseHistory {
